@@ -105,10 +105,16 @@ public class ContainerAccessories extends ContainerPlayer {
 
                 if (newSlotIndex != -1) {
                     Slot accessorySlot = (SlotAccessory) this.inventorySlots.get(newSlotIndex);
-                    accessorySlot.putStack(stack);
-                    slot.putStack(null);
 
-                    return stack;
+                    // Only quick-move stacks that fit the accessory slot's
+                    // limit (1); putting a larger stack directly would bypass
+                    // the slot limit.
+                    if (stack.stackSize <= accessorySlot.getSlotStackLimit()) {
+                        accessorySlot.putStack(stack);
+                        slot.putStack(null);
+
+                        return stack;
+                    }
                 }
             }
         }

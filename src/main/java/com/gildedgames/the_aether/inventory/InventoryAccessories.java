@@ -77,6 +77,10 @@ public class InventoryAccessories implements IAccessoryInventory {
     public ItemStack decrStackSize(int slot, int size) {
         ItemStack stack = this.getStackInSlot(slot);
 
+        if (stack == null) {
+            return null;
+        }
+
         if (stack.stackSize <= size) {
             this.setInventorySlotContents(slot, null);
 
