@@ -91,12 +91,30 @@ are unchanged; its handler is now inert.
    guards are therefore defense-in-depth, not a remote-exploit fix, but they
    prevent real client/server crashes on TE desync.
 
-4. **Audit all containers and slots for dupe exploits** — review
-   `ContainerAccessories`, `ContainerEnchanter`, `ContainerFreezer`,
-   `ContainerIncubator`, `ContainerLore`, and every class in `inventory/slots/`
-   for missing `canInteractWith`, `isItemValid`,
-   `slotClick`/shift-click (`transferStackInSlot`) validation, and
-   stack-overflow on merge (`Math.min` on maxStackSize).
+4. ✅ **Audit all containers and slots (DONE)** — reviewed `ContainerAccessories`,
+   `ContainerEnchanter`, `ContainerFreezer`, `ContainerIncubator`, `ContainerLore`,
+   and all slot classes. Fixes:
+   - `ContainerIncubator.transferStackInSlot`: the ambrosium-torch/moa-egg
+     branches returned early, skipping the standard slot cleanup → phantom
+     0-size stacks left in the source player-inventory slot (desync/ghost).
+     Now falls through to the shared tail (matching enchanter/freezer).
+   - `TileEntityEnchanter` / `TileEntityFreezer`: the output merge did
+     `result.stackSize += existing` and **replaced** the stack, wiping the
+     existing stack's NBT/enchantments and allowing the sum to exceed
+     `getMaxStackSize()`, where `setInventorySlotContents` silently clamped →
+     **item loss**. Now: recipe-start gate refuses to start a craft that would
+     overflow the output slot, and completion merges into a copy of the
+     existing stack (preserving its NBT).
+   - `InventoryAccessories.decrStackSize`: NPE when called on an empty slot
+     (crash). Added null guard.
+   - `ContainerAccessories.transferStackInSlot`: quick-move used
+     `accessorySlot.putStack(stack)` which bypasses the accessory slot's stack
+     limit (1). Now only quick-moves when the stack fits the slot limit.
+   - Confirmed OK: `SlotEnchanter`/`SlotFreezer` reject placement (output-only);
+     `SlotIncubator` moa-egg-only + limit 1; `SlotAccessory` type/event
+     validated; all block containers `canInteractWith` via
+     `isUseableByPlayer` (TE-identity + 8-block distance); `mergeItemStack`
+     used throughout so stack limits are respected by vanilla semantics.
 
 5. **Audit player data (`PlayerAether`) persistence & sync** — verify shard
    counts, accessory inventory, and perk state are saved to NBT, synced only

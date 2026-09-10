@@ -74,9 +74,12 @@ public class TileEntityFreezer extends AetherTileEntity {
 
                     if (this.getStackInSlot(2) != null && this.getStackInSlot(2)
                         .isStackable()) {
-                        result.stackSize += (this.getStackInSlot(2).stackSize);
+                        ItemStack merged = this.getStackInSlot(2)
+                            .copy();
 
-                        this.setInventorySlotContents(2, result);
+                        merged.stackSize += result.stackSize;
+
+                        this.setInventorySlotContents(2, merged);
                     } else {
                         this.setInventorySlotContents(2, result);
                     }
@@ -125,16 +128,15 @@ public class TileEntityFreezer extends AetherTileEntity {
                 .getFreezable(itemstack);
 
             if (freezable != null) {
-                if (this.getStackInSlot(2) == null || (freezable.getOutput()
-                    .getItem()
-                    == this.getStackInSlot(2)
-                        .getItem()
+                ItemStack currentOutput = this.getStackInSlot(2);
+
+                if (currentOutput == null || (freezable.getOutput()
+                    .getItem() == currentOutput.getItem()
                     && freezable.getOutput()
-                        .getItemDamage()
-                        == this.getStackInSlot(2)
-                            .getItemDamage()
-                    && this.getStackInSlot(2)
-                        .isStackable())) {
+                        .getItemDamage() == currentOutput.getItemDamage()
+                    && currentOutput.isStackable()
+                    && currentOutput.stackSize + freezable.getOutput().stackSize <= freezable.getOutput()
+                        .getMaxStackSize())) {
                     this.currentFreezable = freezable;
                     this.ticksRequired = this.currentFreezable.getTimeRequired();
                     this.addEnchantmentWeight(itemstack);
