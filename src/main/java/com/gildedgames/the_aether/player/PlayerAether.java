@@ -109,6 +109,12 @@ public class PlayerAether implements IPlayerAether {
 
     private AttributeModifier healthModifier;
 
+    // Last values broadcast to clients; used so the per-tick update loop only
+    // sends each packet when its value actually changed instead of spamming
+    // every player on every tick.
+    private boolean lastSentHalo, lastSentGlow, lastSentCape, lastSentSeenDialogue, lastSentGetPortal;
+    private int lastSentPoisonTime = -1;
+
     public PlayerAether() {
         this.shouldRenderHalo = true;
         this.shouldRenderGlow = false;
@@ -134,26 +140,53 @@ public class PlayerAether implements IPlayerAether {
     @Override
     public void onUpdate() {
         if (!this.player.worldObj.isRemote) {
-            AetherNetwork.sendToAll(
-                new PacketPerkChanged(
-                    this.getEntity()
-                        .getEntityId(),
-                    EnumAetherPerkType.Halo,
-                    this.shouldRenderHalo));
-            AetherNetwork.sendToAll(
-                new PacketPerkChanged(
-                    this.getEntity()
-                        .getEntityId(),
-                    EnumAetherPerkType.Glow,
-                    this.shouldRenderGlow));
-            AetherNetwork.sendToAll(
-                new PacketCapeChanged(
-                    this.getEntity()
-                        .getEntityId(),
-                    this.shouldRenderCape));
-            AetherNetwork.sendToAll(new PacketSendPoisonTime(this.getEntity(), this.poisonTime));
-            AetherNetwork.sendToAll(new PacketSendSeenDialogue(this.getEntity(), this.seenSpiritDialog));
-            AetherNetwork.sendToAll(new PacketPortalItem(this.getEntity(), this.shouldGetPortal));
+            if (this.shouldRenderHalo != this.lastSentHalo) {
+                this.lastSentHalo = this.shouldRenderHalo;
+                AetherNetwork.sendToAll(
+                    new PacketPerkChanged(
+                        this.getEntity()
+                            .getEntityId(),
+                        EnumAetherPerkType.Halo,
+                        this.shouldRenderHalo));
+            }
+
+            if (this.shouldRenderGlow != this.lastSentGlow) {
+                this.lastSentGlow = this.shouldRenderGlow;
+                AetherNetwork.sendToAll(
+                    new PacketPerkChanged(
+                        this.getEntity()
+                            .getEntityId(),
+                        EnumAetherPerkType.Glow,
+                        this.shouldRenderGlow));
+            }
+
+            if (this.shouldRenderCape != this.lastSentCape) {
+                this.lastSentCape = this.shouldRenderCape;
+                AetherNetwork.sendToAll(
+                    new PacketCapeChanged(
+                        this.getEntity()
+                            .getEntityId(),
+                        this.shouldRenderCape));
+            }
+
+            if (this.seenSpiritDialog != this.lastSentSeenDialogue) {
+                this.lastSentSeenDialogue = this.seenSpiritDialog;
+                AetherNetwork.sendToAll(new PacketSendSeenDialogue(this.getEntity(), this.seenSpiritDialog));
+            }
+
+            if (this.shouldGetPortal != this.lastSentGetPortal) {
+                this.lastSentGetPortal = this.shouldGetPortal;
+                AetherNetwork.sendToAll(new PacketPortalItem(this.getEntity(), this.shouldGetPortal));
+            }
+
+            // Only broadcast poison time while the player is actually poisoned;
+            // otherwise this would be a stray packet on every tick.
+            if (this.isPoisoned && this.poisonTime != this.lastSentPoisonTime) {
+                this.lastSentPoisonTime = this.poisonTime;
+                AetherNetwork.sendToAll(new PacketSendPoisonTime(this.getEntity(), this.poisonTime));
+            } else if (!this.isPoisoned) {
+                this.lastSentPoisonTime = -1;
+            }
         }
 
         if (this.isPoisoned) {
@@ -511,11 +544,16 @@ public class PlayerAether implements IPlayerAether {
 
         this.getAccessoryInventory()
             .readFromNBT(aetherTag.getTagList("accessories", 10));
-        this.setBedLocation(
-            new ChunkCoordinates(
-                aetherTag.getInteger("bedX"),
-                aetherTag.getInteger("bedY"),
-                aetherTag.getInteger("bedZ")));
+
+        if (aetherTag.hasKey("bedX") && aetherTag.hasKey("bedY") && aetherTag.hasKey("bedZ")) {
+            this.setBedLocation(
+                new ChunkCoordinates(
+                    aetherTag.getInteger("bedX"),
+                    aetherTag.getInteger("bedY"),
+                    aetherTag.getInteger("bedZ")));
+        } else {
+            this.setBedLocation(null);
+        }
     }
 
     @Override
@@ -556,20 +594,36 @@ public class PlayerAether implements IPlayerAether {
                 this.shardCount += amount;
                 AetherNetwork.sendToAll(new PacketUpdateLifeShardCount(this.player, this.shardCount));
 
-                this.healthModifier = new AttributeModifier(
+                AttributeModifier newModifier = new AttributeModifier(
                     uuid,
                     "Aether Health Modifier",
                     (this.shardCount * 2.0D),
                     0);
 
-                if (this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
-                    .getModifier(this.uuid) != null) {
+                // 1.7.10 removes modifiers by object identity, so the actual
+                // instance that was applied must be removed, not a fresh copy.
+                // Removing by a stale instance left old modifiers in the
+                // operation sets, making max health accumulate on every shard
+                // use (and again on every login).
+                if (this.healthModifier != null) {
                     this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
                         .removeModifier(this.healthModifier);
-                }
+                } else if (this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
+                    .getModifier(this.uuid) != null) {
+                        // The modifier was restored by vanilla from player NBT (we
+                        // only have a fresh PlayerAether): remove the restored
+                        // instance via the stored map so applyModifier won't throw
+                        // "Modifier is already applied on this attribute!".
+                        this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
+                            .removeModifier(
+                                this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
+                                    .getModifier(this.uuid));
+                    }
+
+                this.healthModifier = newModifier;
 
                 this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
-                    .applyModifier(this.healthModifier);
+                    .applyModifier(newModifier);
             } else {
                 AetherNetwork.sendToAll(new PacketUpdateLifeShardCount(this.player, this.shardCount));
             }

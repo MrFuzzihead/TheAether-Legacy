@@ -106,8 +106,11 @@ public class ItemSkyrootBucket extends Item {
         MovingObjectPosition movingobjectposition = this.getMovingObjectPositionFromPlayer(world, player, true);
         int meta = stack.getItemDamage();
 
-        if (world.getBlock(movingobjectposition.blockX, movingobjectposition.blockY, movingobjectposition.blockZ)
-            == Blocks.cauldron && !world.isRemote) {
+        if (movingobjectposition != null
+            && movingobjectposition.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK
+            && world.getBlock(movingobjectposition.blockX, movingobjectposition.blockY, movingobjectposition.blockZ)
+                == Blocks.cauldron
+            && !world.isRemote) {
             BlockCauldron cauldron = (BlockCauldron) world
                 .getBlock(movingobjectposition.blockX, movingobjectposition.blockY, movingobjectposition.blockZ);
 
