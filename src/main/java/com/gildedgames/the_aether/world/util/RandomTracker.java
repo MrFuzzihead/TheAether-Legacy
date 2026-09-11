@@ -7,15 +7,18 @@ public class RandomTracker {
     public int lastRand = -1;
 
     public int testRandom(Random random, int bound) {
-        int inputRandom = random.nextInt(bound);
+        // Roll until the value differs from the previous roll. The old
+        // implementation recursed without using the result, so a collision
+        // always returned -1 (and consumed an extra draw per retry), which
+        // also made the "not the same as last" intent ineffective.
+        int inputRandom;
 
-        if (inputRandom != this.lastRand) {
-            this.lastRand = inputRandom;
-            return inputRandom;
-        } else {
-            testRandom(random, bound);
-        }
+        do {
+            inputRandom = random.nextInt(bound);
+        } while (inputRandom == this.lastRand);
 
-        return -1;
+        this.lastRand = inputRandom;
+
+        return inputRandom;
     }
 }
