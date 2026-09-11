@@ -64,10 +64,10 @@ main thread). Nothing to test — included for completeness.
 
 ## Section 3 — GUI handler hardening (phase 3)
 
-- [ ] Right-click each block GUI; confirm it opens only within normal reach (~4.5 blocks)
-- [ ] Open a container and walk >8 blocks away
+- [x] Right-click each block GUI; confirm it opens only within normal reach (~4.5 blocks)
+- [x] Open a container and walk >8 blocks away
   - Container closes (existing `isUseableByPlayer` behavior preserved)
-- [ ] Open/close all GUIs repeatedly
+- [x] Open/close all GUIs repeatedly
   - No crashes (failed opens are silent no-ops, not `ClassCastException`s)
 
 ---
