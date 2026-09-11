@@ -142,48 +142,58 @@ public class PlayerAether implements IPlayerAether {
         if (!this.player.worldObj.isRemote) {
             if (this.shouldRenderHalo != this.lastSentHalo) {
                 this.lastSentHalo = this.shouldRenderHalo;
-                AetherNetwork.sendToAll(
+                AetherNetwork.sendToAllAround(
                     new PacketPerkChanged(
                         this.getEntity()
                             .getEntityId(),
                         EnumAetherPerkType.Halo,
-                        this.shouldRenderHalo));
+                        this.shouldRenderHalo),
+                    this.getEntity(),
+                    512.0D);
             }
 
             if (this.shouldRenderGlow != this.lastSentGlow) {
                 this.lastSentGlow = this.shouldRenderGlow;
-                AetherNetwork.sendToAll(
+                AetherNetwork.sendToAllAround(
                     new PacketPerkChanged(
                         this.getEntity()
                             .getEntityId(),
                         EnumAetherPerkType.Glow,
-                        this.shouldRenderGlow));
+                        this.shouldRenderGlow),
+                    this.getEntity(),
+                    512.0D);
             }
 
             if (this.shouldRenderCape != this.lastSentCape) {
                 this.lastSentCape = this.shouldRenderCape;
-                AetherNetwork.sendToAll(
+                AetherNetwork.sendToAllAround(
                     new PacketCapeChanged(
                         this.getEntity()
                             .getEntityId(),
-                        this.shouldRenderCape));
+                        this.shouldRenderCape),
+                    this.getEntity(),
+                    512.0D);
             }
 
             if (this.seenSpiritDialog != this.lastSentSeenDialogue) {
                 this.lastSentSeenDialogue = this.seenSpiritDialog;
-                AetherNetwork.sendToAll(new PacketSendSeenDialogue(this.getEntity(), this.seenSpiritDialog));
+                AetherNetwork.sendTo(
+                    new PacketSendSeenDialogue(this.getEntity(), this.seenSpiritDialog),
+                    (EntityPlayerMP) this.player);
             }
 
             if (this.shouldGetPortal != this.lastSentGetPortal) {
                 this.lastSentGetPortal = this.shouldGetPortal;
-                AetherNetwork.sendToAll(new PacketPortalItem(this.getEntity(), this.shouldGetPortal));
+                AetherNetwork
+                    .sendTo(new PacketPortalItem(this.getEntity(), this.shouldGetPortal), (EntityPlayerMP) this.player);
             }
 
-            // Only broadcast poison time while the player is actually poisoned;
-            // otherwise this would be a stray packet on every tick.
+            // The poison overlay only renders for the poisoned player, so the
+            // counter only needs to reach that player.
             if (this.isPoisoned && this.poisonTime != this.lastSentPoisonTime) {
                 this.lastSentPoisonTime = this.poisonTime;
-                AetherNetwork.sendToAll(new PacketSendPoisonTime(this.getEntity(), this.poisonTime));
+                AetherNetwork
+                    .sendTo(new PacketSendPoisonTime(this.getEntity(), this.poisonTime), (EntityPlayerMP) this.player);
             } else if (!this.isPoisoned) {
                 this.lastSentPoisonTime = -1;
             }
@@ -592,7 +602,14 @@ public class PlayerAether implements IPlayerAether {
         if (!this.getEntity().worldObj.isRemote) {
             if (this.getShardsUsed() < this.getMaxShardCount()) {
                 this.shardCount += amount;
-                AetherNetwork.sendToAll(new PacketUpdateLifeShardCount(this.player, this.shardCount));
+
+                // Only the owning player's client needs the shard count (it
+                // drives the "max shards" message and health bar).
+                if (this.player instanceof EntityPlayerMP) {
+                    AetherNetwork.sendTo(
+                        new PacketUpdateLifeShardCount(this.player, this.shardCount),
+                        (EntityPlayerMP) this.player);
+                }
 
                 AttributeModifier newModifier = new AttributeModifier(
                     uuid,

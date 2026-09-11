@@ -22,9 +22,13 @@ import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.network.packets.PacketAccessory;
 import com.gildedgames.the_aether.network.packets.PacketAchievement;
+import com.gildedgames.the_aether.network.packets.PacketSendEternalDay;
+import com.gildedgames.the_aether.network.packets.PacketSendShouldCycle;
+import com.gildedgames.the_aether.network.packets.PacketSendTime;
 import com.gildedgames.the_aether.player.abilities.AbilityRepulsion;
 import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.registry.achievements.AetherAchievement;
+import com.gildedgames.the_aether.world.AetherData;
 
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerChangedDimensionEvent;
@@ -55,6 +59,8 @@ public class PlayerAetherEvents {
             } else {
                 playerAether.givePortalFrame();
             }
+
+            sendAetherDayState(event.player);
         }
     }
 
@@ -99,7 +105,27 @@ public class PlayerAetherEvents {
 
             AetherNetwork.sendTo(new PacketAccessory(playerAether), (EntityPlayerMP) event.player);
             playerAether.updateShardCount(0);
+
+            sendAetherDayState(event.player);
         }
+    }
+
+    /**
+     * Sends the current Aether day/time state to a single player. Only
+     * meaningful when the player is in the Aether (the client-side handlers
+     * ignore it otherwise), but it lets a joining player get the correct
+     * eternal-day / time state without the server re-broadcasting every tick.
+     */
+    private void sendAetherDayState(EntityPlayer player) {
+        if (player.dimension != AetherConfig.getAetherDimensionID()) {
+            return;
+        }
+
+        AetherData data = AetherData.getInstance(player.worldObj);
+
+        AetherNetwork.sendTo(new PacketSendTime(data.getAetherTime()), (EntityPlayerMP) player);
+        AetherNetwork.sendTo(new PacketSendEternalDay(data.isEternalDay()), (EntityPlayerMP) player);
+        AetherNetwork.sendTo(new PacketSendShouldCycle(data.isShouldCycleCatchup()), (EntityPlayerMP) player);
     }
 
     @SubscribeEvent

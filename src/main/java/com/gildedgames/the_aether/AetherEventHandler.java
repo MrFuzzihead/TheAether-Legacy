@@ -21,6 +21,7 @@ import net.minecraft.util.MovingObjectPosition.MovingObjectType;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.EntityStruckByLightningEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
@@ -364,22 +365,39 @@ public class AetherEventHandler {
                 AetherWorldProvider providerAether = (AetherWorldProvider) provider;
 
                 providerAether.setIsEternalDay(data.isEternalDay());
-                AetherNetwork.sendToAll(new PacketSendEternalDay(providerAether.getIsEternalDay()));
+
+                // Only broadcast when the shared aether-day state actually
+                // changed instead of every tick.
+                if (providerAether.needsEternalDaySync(data.isEternalDay())) {
+                    AetherNetwork.sendToDimension(
+                        new PacketSendEternalDay(providerAether.getIsEternalDay()),
+                        AetherConfig.getAetherDimensionID());
+                }
 
                 providerAether.setShouldCycleCatchup(data.isShouldCycleCatchup());
-                AetherNetwork.sendToAll(new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()));
+
+                if (providerAether.needsShouldCycleSync(data.isShouldCycleCatchup())) {
+                    AetherNetwork.sendToDimension(
+                        new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()),
+                        AetherConfig.getAetherDimensionID());
+                }
             }
         }
+    }
 
-        for (Object entity : event.world.loadedEntityList) {
-            if (entity instanceof EntityItem) {
-                EntityItem entityItem = (EntityItem) entity;
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        // Dungeon keys are made invulnerable so they never despawn. Previously
+        // this was a per-tick scan of every loaded entity in every world (an
+        // O(entities) sweep at 20 tps); the join event fires exactly when the
+        // item spawns, which is strictly better.
+        if (!event.world.isRemote && event.entity instanceof EntityItem) {
+            EntityItem entityItem = (EntityItem) event.entity;
 
-                if (entityItem.getEntityItem()
-                    .getItem() == ItemsAether.dungeon_key) {
-                    ObfuscationReflectionHelper
-                        .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
-                }
+            if (entityItem.getEntityItem()
+                .getItem() == ItemsAether.dungeon_key) {
+                ObfuscationReflectionHelper
+                    .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
             }
         }
     }

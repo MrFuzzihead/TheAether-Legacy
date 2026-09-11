@@ -5,6 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 
 import com.gildedgames.the_aether.AetherConfig;
+import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.world.AetherData;
 
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -112,6 +113,11 @@ public class PacketSetTime extends AetherPacket<PacketSetTime> {
         // so this is the layer that actually drives the sun).
         AetherData.getInstance(aetherServer)
             .setAetherTime(shouldTime % 24000L);
+
+        // Push the new sky time out immediately rather than waiting for the
+        // per-second sync throttle: a deliberate user action should jump the
+        // sky at once (and keeps the Sun Altar slider responsive).
+        AetherNetwork.sendToDimension(new PacketSendTime(shouldTime % 24000L), AetherConfig.getAetherDimensionID());
     }
 
 }

@@ -24,6 +24,19 @@ public class AetherWorldProvider extends WorldProvider {
     private boolean shouldCycleCatchup;
     private long aetherTime = 6000;
 
+    // Change-detection caches so the server only broadcasts the eternal-day
+    // state when it actually changes (it nearly never does) instead of every
+    // tick.
+    private boolean eternalDaySynced;
+    private boolean lastSentEternalDay;
+    private boolean shouldCycleSynced;
+    private boolean lastSentShouldCycle;
+
+    // Throttles the aether-time sync packet to at most once per second.
+    // Initialized so the very first sync happens immediately.
+    private long lastSentAetherTime = Long.MIN_VALUE;
+    private long lastTimeSyncTick = -20L;
+
     public AetherWorldProvider() {
         super();
     }
@@ -39,28 +52,37 @@ public class AetherWorldProvider extends WorldProvider {
             if (!this.worldObj.isRemote) {
                 AetherData data = AetherData.getInstance(this.worldObj);
 
-                long newAetherTime;
-
                 if (data.isEternalDay()) {
-                    // The Aether's sky time is stored in AetherData. It is
-                    // advanced here by one tick per server tick so the sun
-                    // cycles; the world's own WorldInfo time cannot be
-                    // relied on for setting (in this environment writes to it
-                    // do not stick), so everything (altar, sleeping, the tick
-                    // advance) goes through AetherData. Once eternal day is
-                    // active we stay caught up — the "catch-up" phase is no
-                    // longer needed since we no longer track WorldInfo time.
+                    // The Aether's sky time lives in AetherData and advances
+                    // one tick per server tick so the sun cycles. The world's
+                    // own WorldInfo time cannot be reliably set in this
+                    // environment (writes to it do not stick), so everything
+                    // (altar, sleeping, this advance) goes through AetherData;
+                    // the old catch-up / follow-WorldInfo logic was removed by
+                    // the Section-0 time-system rework.
                     data.setShouldCycleCatchup(true);
-                    newAetherTime = (data.getAetherTime() + 1L) % 24000L;
-                    data.setAetherTime(newAetherTime);
-                } else {
-                    newAetherTime = 6000L;
+                    data.setAetherTime((data.getAetherTime() + 1L) % 24000L);
+                } else if (data.getAetherTime() != 6000L) {
+                    // Eternal day inactive: pin the sky at noon (6000). Write
+                    // only on the transition; the steady state costs nothing.
                     data.setAetherTime(6000L);
                 }
 
                 this.aetherTime = data.getAetherTime();
 
-                AetherNetwork.sendToAll(new PacketSendTime(this.aetherTime));
+                // Sync the aether time to the dimension's clients at most
+                // once per 20 ticks (once per second); a second of latency is
+                // imperceptible on a 20-minute day/night cycle. The
+                // joining-player sync happens in the dimension-change
+                // handler. (Phase-9 throttle.)
+                long totalTime = this.worldObj.getTotalWorldTime();
+
+                if (this.aetherTime != this.lastSentAetherTime && totalTime - this.lastTimeSyncTick >= 20L) {
+                    this.lastSentAetherTime = this.aetherTime;
+                    this.lastTimeSyncTick = totalTime;
+                    AetherNetwork
+                        .sendToDimension(new PacketSendTime(this.aetherTime), AetherConfig.getAetherDimensionID());
+                }
             }
         }
 
@@ -83,6 +105,36 @@ public class AetherWorldProvider extends WorldProvider {
 
     public void setIsEternalDay(boolean set) {
         this.eternalDay = set;
+    }
+
+    /**
+     * Returns true (once) when the eternal-day value changes from what was
+     * last broadcast, so the server only re-broadcasts it on change.
+     */
+    public boolean needsEternalDaySync(boolean value) {
+        if (!this.eternalDaySynced || value != this.lastSentEternalDay) {
+            this.lastSentEternalDay = value;
+            this.eternalDaySynced = true;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns true (once) when the should-cycle-catchup value changes from
+     * what was last broadcast.
+     */
+    public boolean needsShouldCycleSync(boolean value) {
+        if (!this.shouldCycleSynced || value != this.lastSentShouldCycle) {
+            this.lastSentShouldCycle = value;
+            this.shouldCycleSynced = true;
+
+            return true;
+        }
+
+        return false;
     }
 
     public boolean getIsEternalDay() {
