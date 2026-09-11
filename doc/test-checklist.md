@@ -32,25 +32,25 @@ players or a dedicated server.
 
 ## Section 1 — Packet validation (phase 1)
 
-- [ ] Open the accessories GUI from the inventory button and the keybind
+- [x] Open the accessories GUI from the inventory button and the keybind
   - Opens normally (whitelisted IDs still work)
-- [ ] Right-click enchanter / freezer / incubator / treasure chest
+- [x] Right-click enchanter / freezer / incubator / treasure chest
   - GUIs open normally (block path, bypasses the packet)
-- [ ] Hold a Valkyrie tool; left-click a mob ~7–8 blocks away with clear LOS
+- [x] Hold a Valkyrie tool; left-click a mob ~7–8 blocks away with clear LOS
   - Hits (extended reach preserved)
-- [ ] Attack a mob >9 blocks away, or through a wall, or with a non-Valkyrie item
+- [x] Attack a mob >9 blocks away, or through a wall, or with a non-Valkyrie item
   - No hit (server reach + LOS enforced)
-- [ ] Toggle halo/glow in the perks GUI; watch a second player
+- [x] Toggle halo/glow in the perks GUI; watch a second player
   - **[MP]** Other player sees the halo/glow toggle
-- [ ] Toggle cape in chat options
+- [x] Toggle cape in chat options
   - **[MP]** Other players see it update
-- [ ] Ride a moa/swet and sneak
+- [x] Ride a moa/swet and sneak
   - Mount sneaking still applies
-- [ ] Hold **12** victory medals; start the Valkyrie Queen fight
+- [x] Hold **12** victory medals; start the Valkyrie Queen fight
   - Exactly **10 consumed, 2 remain** (older code wiped the whole stack)
-- [ ] Try starting the Queen fight with <10 medals
+- [x] Try starting the Queen fight with <10 medals
   - Blocked; nothing consumed, no duel
-- [ ] Lore GUI: place a lore item; also try an item with no lore entry; close the GUI
+- [x] Lore GUI: place a lore item; also try an item with no lore entry; close the GUI
   - Lore item accepted; non-lore item refused; remaining lore item drops on close
 
 ---
