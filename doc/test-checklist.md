@@ -74,17 +74,17 @@ main thread). Nothing to test — included for completeness.
 
 ## Section 4 — Containers & slots (phase 4)
 
-- [ ] Shift-click a stack of ambrosium torches into the incubator; then a moa egg
+- [x] Shift-click a stack of ambrosium torches into the incubator; then a moa egg
   - Items move cleanly; **source slot shows correct remainder** (no ghost 0-size stack); incubator starts
-- [ ] Enchant two of the same stackable item consecutively in the enchanter
+- [x] Enchant two of the same stackable item consecutively in the enchanter
   - Output stacks correctly; existing output's enchantments/NBT not wiped
-- [ ] Fill enchanter output to near-max, then finish one more craft
+- [x] Fill enchanter output to near-max, then finish one more craft
   - No item loss; craft stops rather than overflowing (gate)
-- [ ] Do the same for the freezer
+- [x] Do the same for the freezer
   - Same expectations
-- [ ] Shift-click an accessory from inventory to an empty accessory slot
+- [x] Shift-click an accessory from inventory to an empty accessory slot
   - Moves in; accessory slot respects limit of 1
-- [ ] Drag/drop items across all GUIs, including onto empty slots
+- [x] Drag/drop items across all GUIs, including onto empty slots
   - No crashes (decrStackSize NPE guard)
 
 ---
