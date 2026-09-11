@@ -1,6 +1,6 @@
 # Aether Legacy — In-Game Test Checklist
 
-Test sheet for the audit work completed in phases 1–5 (plus the sleep/time
+Test sheet for the audit work completed in phases 1–10 (plus the sleep/time
 system fixes). Covers what changed and how to verify it in-game.
 
 **Setup:** singleplayer exercises the integrated server (all server-side
@@ -91,20 +91,90 @@ main thread). Nothing to test — included for completeness.
 
 ## Section 5 — Player data (phase 5)
 
-- [ ] Use 1 life shard; check max health; use a 2nd shard; check again
+- [x] Use 1 life shard; check max health; use a 2nd shard; check again
   - Exact `20 + 2×shards` (22, then 24) — **not inflated**
-- [ ] Use 2 shards, exit and rejoin the world
+- [x] Use 2 shards, exit and rejoin the world
   - Max health still 24 (modifier restored cleanly, no double-add)
-- [ ] Die and respawn (with shards used)
+- [x] Die and respawn (with shards used)
   - Max health still 24 (modifier reapplied on respawn)
-- [ ] Toggle halo off, relog
+- [x] Toggle halo off, relog
   - Halo still off (persisted to NBT)
-- [ ] New world/new player: die in the overworld
+- [x] New world/new player: die in the overworld
   - Respawns in the **overworld** (no phantom Aether bed at 0,0,0)
-- [ ] Sleep in a skyroot bed in the Aether, then die
+- [x] Sleep in a skyroot bed in the Aether, then die
   - Respawns at the Aether bed
-- [ ] **[MP]** Player A uses a shard / changes accessories
+- [x] **[MP]** Player A uses a shard / changes accessories
   - Player B sees correct health bar and accessories
+
+---
+
+## Section 6 — Item logic (phase 6)
+
+- [x] Kill a mob with a **skyroot sword**; pick up both drops
+  - Two full, independent stacks (double drop no longer shares one ItemStack —
+    no 1×/partial-stack weirdness depending on pickup order)
+- [x] Use a skyroot bucket: scoop water, place it, scoop again; also right-click
+  while aiming at nothing/edge of range
+  - Normal fill/place behavior; no NPE crash
+- [x] Right-click with a gravitite tool (levitation block use); check durability
+  - Works; durability decreases only server-side (no double wear / desync)
+- [x] Use a life shard
+  - Health +2 exactly (redundant broadcast removed; see also Section 5)
+
+---
+
+## Section 7 — Tile entities (phase 7)
+
+- [ ] Unlock a bronze dungeon treasure chest; count the loot
+  - **5–9 stacks** (not always exactly 5), each in a distinct slot (no lost drops)
+- [ ] **[MP]** Second player loads the chunk containing a locked chest
+  - Chest renders locked; its contents are **not** sent to them (description
+    packet no longer serializes the inventory — x-ray leak closed)
+- [ ] Incubate a moa egg to completion
+  - Hatches normally
+- [ ] (Edge) Remove the egg from the incubator right as it finishes (or hopper it out)
+  - No crash (null guard on the egg slot)
+
+---
+
+## Section 8 — Static state (phase 8)
+
+- [ ] Lore GUI end-to-end (place lore item, close, re-open)
+  - Still works — `AetherLore.hasKey` removal is behavior-neutral (gate is now
+    computed per-slot; see also Section 1 lore items)
+- No other in-game surface changed in phase 8; the remaining findings were
+  verified-benign statics (code-verified only).
+
+---
+
+## Section 9 — Performance & sync (phase 9)
+
+- [ ] Drop a dungeon key (or kill the dungeon boss so it drops); pick it up
+  - Key still unlocks its dungeon (per-tick entity scan replaced by
+    EntityJoinWorldEvent — spawn-time handling)
+- [ ] Kill the Sun Spirit; watch the Aether sky
+  - Eternal-day catch-up completes in seconds; sky settles at world time
+- [ ] **[MP]** Join a world where eternal day is already active (late joiner)
+  - Sky/altar state correct immediately on entering the Aether (login/dimension
+    sync replaces the old per-tick broadcast)
+- [ ] **[MP]** Toggle halo/cape; other player within render distance sees it
+  - `sendToAllAround` fan-out works for model rendering
+- [ ] **[MP]** Get hit by a poison dart / use a life shard
+  - Overlay & shard counter update for the affected player (owner-targeted send)
+- [ ] Aether day/night cycle still advances smoothly for clients
+  - Time sync throttled to 1/s is imperceptible on a 20-min cycle *(applies to
+    the phase-9 branch state; the Section-0 branch currently re-sends per tick)*
+
+---
+
+## Section 10 — Client crash hardening (phase 10)
+
+- [ ] Click through Valkyrie Queen / Sun Spirit dialogue lines rapidly
+  - No client crash if a dialogue action throws (logged, GUI survives)
+- [ ] Repeatedly load/unload worlds (title screen ↔ world)
+  - No NPE from the Aether HUD overlay during transitions
+- [ ] **[MP]** Another player joins/leaves while you are watching them
+  - No renderer NPE for accessories / Aether armor
 
 ---
 

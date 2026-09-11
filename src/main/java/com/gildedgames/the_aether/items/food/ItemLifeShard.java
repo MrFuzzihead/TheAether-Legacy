@@ -31,8 +31,6 @@ public class ItemLifeShard extends Item {
         ItemStack heldItem = player.getHeldItem();
 
         if (!worldIn.isRemote) {
-            playerAether.updateShardCount(0);
-
             if (playerAether.getShardsUsed() < playerAether.getMaxShardCount()) {
                 playerAether.updateShardCount(1);
                 --heldItem.stackSize;

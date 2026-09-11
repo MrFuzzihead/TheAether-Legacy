@@ -39,9 +39,8 @@ public class ItemGravititeTool extends ItemAetherTool {
             if (!world.isRemote) {
                 world.spawnEntityInWorld(entity);
                 world.setBlockToAir(x, y, z);
+                heldItem.damageItem(4, player);
             }
-
-            heldItem.damageItem(4, player);
         }
 
         return true;
