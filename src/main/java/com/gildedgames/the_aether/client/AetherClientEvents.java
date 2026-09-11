@@ -453,8 +453,12 @@ public class AetherClientEvents {
     @SubscribeEvent
     public void onRenderAetherArmor(SetArmorModel event) {
         if (event.stack != null && event.stack.getItem() instanceof ItemAetherArmor) {
-            event.result = PlayerAetherRenderer.instance()
-                .renderAetherArmor(PlayerAether.get(event.entityPlayer), event.renderer, event.stack, 3 - event.slot);
+            PlayerAether playerAether = PlayerAether.get(event.entityPlayer);
+
+            if (playerAether != null) {
+                event.result = PlayerAetherRenderer.instance()
+                    .renderAetherArmor(playerAether, event.renderer, event.stack, 3 - event.slot);
+            }
         }
     }
 
@@ -462,6 +466,13 @@ public class AetherClientEvents {
     public void onRenderAccessories(RenderLivingEvent.Post event) {
         if (event.entity instanceof EntityPlayer) {
             PlayerAether playerAether = PlayerAether.get((EntityPlayer) event.entity);
+
+            // Defensive: a player without the Aether extended property (e.g.
+            // added by another mod before construction finished) must not
+            // crash the renderer.
+            if (playerAether == null) {
+                return;
+            }
 
             if (event.renderer instanceof RenderPlayer) {
                 PlayerAetherRenderer.instance()

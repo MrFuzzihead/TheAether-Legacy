@@ -267,10 +267,30 @@ are unchanged; its handler is now inert.
      `AetherOverlay`/`ScaledResolution` allocations are per-frame cheap;
      per-tick `AetherConfig` reads are in-memory map lookups.
 
-10. **Client-side crash cleanup** — `GuiDialogue` bare
-    `printStackTrace()`, `AetherMainMenu` reflective `Desktop` launch
-    (verify try/catch coverage), `EntityAetherItem`/renderer null-safety on
-    missing player data.
+10. ✅ **Client-side crash cleanup (DONE)** — fixed crash-prone client paths:
+    - `GuiDialogue.mouseClicked`: the handler catch was `IOException`-only with
+      a bare `printStackTrace` — a `RuntimeException` from a dialogue
+      subclass's `dialogueClicked` (e.g. NPE) crashed the whole client. Now
+      catches `Exception`, logs via Log4j, and the misleading
+      `throws IOException` on the base method is removed (no subclass declares
+      it).
+    - `EntitiesAether.createEntityByID`: bare `printStackTrace` replaced with
+      the existing `logger.error(..., exception)`.
+    - `GuiAetherInGame.onRenderGui`: `PlayerAether.get(mc.thePlayer)` had no
+      null guard on `mc.thePlayer` (the block-overlay handler right above it
+      guarded, but the text-overlay handler did not) → NPE during world
+      load/unload transitions. Now guarded.
+    - `AetherClientEvents.onRenderAccessories` / `onRenderAetherArmor`:
+      `PlayerAether.get(entity)` could be null (e.g. a player entity added by
+      another mod before the Aether extended property was registered) → NPE in
+      the renderer. Null-guarded, matching the existing pattern in
+      `onRenderInvisibility`.
+    - Verified already-safe, no change: `AetherMainMenu.confirmClicked`'s
+      reflective `Desktop` link launch is wrapped in `catch (Throwable)` +
+      `logger.error` (vanilla's guarded code copied into the custom menu);
+      `EntityAetherItem` is constructor-only (no missing-data deref);
+      `PlayerAetherRenderer.instance()` is a `static final` eagerly-initialized
+      singleton (never null).
 
 11. **Regression-verify** — after fixes, run `gradlew build` (compile check)
     and, where feasible, quick in-game smoke tests of each patched packet path
