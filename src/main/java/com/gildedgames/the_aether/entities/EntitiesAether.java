@@ -146,7 +146,7 @@ public class EntitiesAether {
                     .newInstance(new Object[] { p_75616_1_ });
             }
         } catch (Exception exception) {
-            exception.printStackTrace();
+            logger.error("Failed to create Aether Entity with id " + id, exception);
         }
 
         if (entity == null) {
