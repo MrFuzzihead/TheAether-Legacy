@@ -116,19 +116,67 @@ are unchanged; its handler is now inert.
      `isUseableByPlayer` (TE-identity + 8-block distance); `mergeItemStack`
      used throughout so stack limits are respected by vanilla semantics.
 
-5. **Audit player data (`PlayerAether`) persistence & sync** — verify shard
-   counts, accessory inventory, and perk state are saved to NBT, synced only
-   server→client, and that `PlayerAether.get(player)` storage (likely a map
-   keyed by player) doesn't leak `EntityPlayer` references after logout
-   (memory leak check).
+5. ✅ **Audit player data (`PlayerAether`) persistence & sync (DONE)** —
+   storage uses Forge extended properties
+   (`registerExtendedProperties("aether_legacy:player_aether", ...)`), which
+   are tied to the entity lifecycle and saved/loaded via the entity's NBT
+   (`saveNBTData`/`loadNBTData` called automatically by `Entity.writeToNBT` /
+   `readFromNBT`). **No static map keyed by player → no map memory leak**; the
+   extended-properties HashMap lives on the entity and is GC'd with it. Fixes:
+   - `updateShardCount` health-modifier accumulation: 1.7.10's
+     `removeModifier(AttributeModifier)` removes by **object identity** from
+     the operation sets (it only purges `mapByUUID` by UUID). The old code
+     created a fresh instance each call, so stale modifier objects remained in
+     `getModifiersByOperation(0)` → `computeValue()` summed them → max health
+     **accumulated on every shard use and again on every login** (and
+     `applyModifier` could throw "already applied"). Now tracks and removes the
+     actual applied instance (plus a safe path for modifiers restored from NBT
+     on a fresh login).
+   - `onUpdate` broadcast spam: sent **6 packets to ALL players every tick**
+     (halo/glow/cape/seen-dialogue/get-portal/poison-time). Added
+     change-detection caches — each is now sent only when the value changes
+     (halo/glow/cape/toggles are rare; poison time only while poisoned). ~7x
+     packet reduction on idle, ~86x on running-around-without-poison.
+   - `loadNBTData` unconditionally set `bedLocation(0,0,0)` for fresh players
+     (no keys), which wrongly routed respawns to the Aether via
+     `AetherWorldProvider.getRespawnDimension`. Now gated on `hasKey`.
+   - Confirmed OK: `isDonator()` always true (by design — free perks); shard
+     count is copied on death (`onPlayerAetherClone`); accessories dropped on
+     death unless keepInventory; respawn re-applies the health modifier via
+     `updateShardCount(0)`; `saveNBTData` writes shardCount/accessories/bed/
+     poison/dialog/portal under the `aetherI` tag.
 
-6. **Fix item logic bugs** — `ItemLifeShard` (stack cleanup at 0, remove
-   redundant `updateShardCount(0)` call), `ItemDeveloperStick` (unguarded
-   `--heldItem.stackSize`), and review `DoubleDropHelper`,
-   `ItemSkyrootBucket`, `ItemGravititeTool` and `ItemSkyrootSword`
-   (double-drop tools are classic dupe-bug territory — e.g., double drops
-   firing in `onBlockDestroyed` when the block wasn't actually mined, or
-   applying to creative-mode players).
+6. ✅ **Fix item logic bugs (DONE)** — reviewed the flagged items against the
+   1.7.10 vanilla handlers:
+   - `ItemLifeShard`: removed the redundant `updateShardCount(0)` before every
+     use (extra broadcast + pointless modifier re-application). The
+     `--heldItem.stackSize` was already vanilla-safe: `tryUseItem` sets the
+     slot to null at stackSize 0 and restores the stack in creative.
+   - `AetherEventHandler.onEntityDropLoot` (skyroot sword double drop): the
+     duplicate `EntityItem` was created with `items.getEntityItem()` — the
+     **same mutable ItemStack object** shared by two falling entities
+     (both data watchers reference it). Pickup order determined whether the
+     player got 1×, 2×, or partial stacks. Now uses `.copy()` so each
+     EntityItem owns its stack — deterministic double drops, no shared-object
+     hazard.
+   - `ItemSkyrootBucket.onItemUseFirst`: `getMovingObjectPositionFromPlayer`
+     can return `null`, and the alt-code dereferenced `movingobjectposition.blockX`
+     → server/client NPE crash. Now null-checked. (Also verified the rest of
+     the bucket: `fillBucket`/`onBucketUsed` handle 0-size and creative
+     correctly; the creative water-drain matches vanilla behavior.)
+   - `ItemGravititeTool.onItemUse`: `heldItem.damageItem(4, player)` ran on
+     both sides (cosmetic client-side durability desync vs the server-authoritative
+     value). Now damages only server-side with the spawn.
+   - `ItemDeveloperStick`: investigated — vanilla `EntityPlayer.interactWith`
+     restores the stack copy in creative and destroys the item at 0 in
+     survival; the unguarded decrement is only reachable for unranked players
+     (joke branches) and is cleaned up by vanilla. No change needed.
+   - `DoubleDropHelper` / `ItemHolystoneTool`: verified 1.7.10's
+     `tryHarvestBlock` only calls `harvestBlock` and `onBlockDestroyed` on the
+     **survival** path (creative calls `removeBlock` and returns early), so the
+     skyroot double-drop and holystone ambrosium bonus cannot be farmed in
+     creative. `EnchantmentHelper.getEnchantmentLevel` is null-safe, so the
+     fortune/silk calls are safe for bare-hand breaks. No change needed.
 
 7. **Tile entity audit** — fix `TileEntityTreasureChest` loot roll
    (`nextInt(1)` bug), stop syncing full inventory NBT to clients (send only

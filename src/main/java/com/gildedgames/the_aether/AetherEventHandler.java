@@ -255,7 +255,8 @@ public class AetherEventHandler {
                                 entity.posX,
                                 entity.posY,
                                 entity.posZ,
-                                items.getEntityItem());
+                                items.getEntityItem()
+                                    .copy());
 
                             entity.worldObj.spawnEntityInWorld(item);
                         }
