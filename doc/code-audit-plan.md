@@ -210,10 +210,26 @@ are unchanged; its handler is now inert.
      inside `!worldObj.isRemote` (client-side execution is cosmetic — progress
      resets, achievement toasts — or event-post-only).
 
-8. **Static/global state audit** — eliminate or scope `AetherLore.hasKey`
-   (make it per-player), check `AetherEventHandler`, `AetherWorld`, and
-   `RandomTracker` for other client-controllable or cross-player global
-   state.
+8. ✅ **Static/global state audit (DONE)** — swept all mutable static fields in
+   the codebase and checked the plan's named targets:
+   - `AetherLore.hasKey`: the global-static lore-slot gate was neutralized in
+     phase 1 (PacketCheckKey no-op, SlotLore computes deterministically) and
+     had zero remaining references — now **removed entirely**.
+   - `RandomTracker.testRandom`: recursive retry discarded the recursion's
+     result and fell through to `return -1` on a collision (consuming an extra
+     RNG draw per retry and never actually retrying). Rewritten as a loop that
+     rolls until different from the last value. (Per-instance state, so it was
+     never global; the fix is a correctness bugfix.)
+   - Verified benign (documented): `AetherEventHandler`/`AetherWorld` have no
+     mutable statics; `AetherAPI`/`BlocksAether`/`ItemsAether`/
+     `EntitiesAether`/`AetherCreativeTabs` registries and
+     `AetherRankings.ranks` (UUID whitelist) are only written during
+     initialization; `AetherConfig.config.save()` from the main-menu toggle is
+     a client-side preference written on the client thread and read
+     client-only; `AetherNameGen.rand`/`AetherTrivia.random`/`AetherKeybinds`
+     are client or main-thread-confined; `AetherNetwork.discriminant` and
+     `PotionInebriation.inebriation` are init-time only. Nothing
+     client-controllable or cross-player remains.
 
 9. **Performance pass** — profile-critical paths: `ChunkProviderAether` +
    `MapGen*` world gen (allocation churn, per-chunk `new Random()`, redundant
