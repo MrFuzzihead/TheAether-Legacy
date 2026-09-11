@@ -11,21 +11,21 @@ players or a dedicated server.
 
 ## Section 0 — Sleep & time system (pre-phase fixes + PacketSetTime)
 
-- [ ] Build a skyroot bed in the Aether; note overworld time (`/time query daytime`), sleep in the Aether
+- [x] Build a skyroot bed in the Aether; note overworld time (`/time query daytime`), sleep in the Aether
   - Aether reaches morning; **overworld time unchanged**
-- [ ] Sleep in a vanilla bed in the overworld
+- [x] Sleep in a vanilla bed in the overworld
   - Overworld advances (when all overworld players asleep)
-- [ ] **[MP]** Player A asleep in the Aether, Player B awake in the overworld
+- [x] **[MP]** Player A asleep in the Aether, Player B awake in the overworld
   - Neither dimension advances
 - [x] Place a Sun Altar **before** killing the Sun Spirit; right-click it
   - Message shown; **GUI does not open**
-- [ ] Kill the Sun Spirit (gold dungeon boss); wait for eternal-day catch-up; right-click the Sun Altar
+- [x] Kill the Sun Spirit (gold dungeon boss); wait for eternal-day catch-up; right-click the Sun Altar
   - Altar GUI opens (dedicated server: op required, or `sunAltarMultiplayer=true`)
-- [ ] Drag the Sun Altar slider
+- [x] Drag the Sun Altar slider
   - Only the **Aether's** time changes; overworld/nether untouched
-- [ ] **[MP]** Non-op player uses the Sun Altar on a dedicated server
+- [x] **[MP]** Non-op player uses the Sun Altar on a dedicated server
   - Permission message; no time change
-- [ ] Start the Sun Spirit fight / check its boss bar
+- [x] Start the Sun Spirit fight / check its boss bar
   - Random boss name renders properly (not "0/1, Sun Spirit")
 
 ---

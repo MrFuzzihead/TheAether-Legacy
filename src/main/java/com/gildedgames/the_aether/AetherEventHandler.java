@@ -15,7 +15,6 @@ import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EntityDamageSource;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.MovingObjectPosition.MovingObjectType;
@@ -51,7 +50,6 @@ import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.world.AetherData;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 
-import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.ObfuscationReflectionHelper;
 import cpw.mods.fml.common.eventhandler.Event;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -390,14 +388,25 @@ public class AetherEventHandler {
         final World world = event.entityPlayer.worldObj;
 
         if (!world.isRemote && event.entityPlayer.dimension == AetherConfig.getAetherDimensionID()) {
-            final MinecraftServer server = FMLCommonHandler.instance()
-                .getMinecraftServerInstance();
+            final WorldServer worldServer = (WorldServer) world;
 
-            final WorldServer worldServer = server.worldServerForDimension(AetherConfig.getAetherDimensionID());
+            // Only skip time when every player in the Aether is fully asleep.
+            // 1.7.10's WorldServer.areAllPlayersAsleep() relies on the
+            // internal allPlayersSleeping flag, which is unreliable for custom
+            // dimensions (and would also silently block the vanilla skip), so
+            // compute the intent directly.
+            boolean allAsleep = !worldServer.playerEntities.isEmpty();
 
-            // Only skip time in the Aether itself, and only when every player in the
-            // Aether is fully asleep. The overworld is never touched.
-            if (worldServer.playerEntities.size() > 0 && worldServer.areAllPlayersAsleep()) {
+            if (allAsleep) {
+                for (Object e : worldServer.playerEntities) {
+                    if (!((EntityPlayer) e).isPlayerFullyAsleep()) {
+                        allAsleep = false;
+                        break;
+                    }
+                }
+            }
+
+            if (allAsleep) {
                 performTimeSet(event, world, worldServer);
             }
         }
@@ -425,8 +434,15 @@ public class AetherEventHandler {
             final long i = worldServer.getWorldInfo()
                 .getWorldTime() + 24000L;
 
+            // Best effort on the world's own clock.
             worldServer.getWorldInfo()
                 .setWorldTime(i - i % 24000L);
+
+            // The authoritative Aether sky time lives in AetherData (the
+            // WorldInfo write does not stick in this environment); sleeping
+            // brings the sky to dawn.
+            AetherData.getInstance(worldServer)
+                .setAetherTime(0L);
 
             PlayerAether.get(event.entityPlayer)
                 .setBedLocation(event.entityPlayer.getBedLocation(AetherConfig.getAetherDimensionID()));
