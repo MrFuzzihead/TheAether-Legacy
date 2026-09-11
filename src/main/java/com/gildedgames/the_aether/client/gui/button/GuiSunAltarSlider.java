@@ -3,11 +3,13 @@ package com.gildedgames.the_aether.client.gui.button;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldProvider;
 
 import org.lwjgl.opengl.GL11;
 
 import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.network.packets.PacketSetTime;
+import com.gildedgames.the_aether.world.AetherWorldProvider;
 
 public class GuiSunAltarSlider extends GuiButton {
 
@@ -17,10 +19,35 @@ public class GuiSunAltarSlider extends GuiButton {
 
     private World world;
 
+    /**
+     * While non-negative, the slider holds this value (rather than re-reading
+     * the synced sky time) until the server's PacketSendTime confirms the
+     * change, preventing a one-frame rebound to the old position after the
+     * mouse is released.
+     */
+    private float pendingValue = -1.0F;
+
     public GuiSunAltarSlider(World world, int par2, int par3, String par5Str) {
         super(1, par2, par3, 150, 20, par5Str);
 
         this.world = world;
+    }
+
+    /**
+     * The time-of-day (0..24000) that the slider should display. Reads the
+     * Aether world provider's synced aetherTime — the authoritative sky time —
+     * rather than the raw WorldInfo time, which does not track the Aether's
+     * custom sky clock.
+     */
+    private long currentAetherTime() {
+        WorldProvider provider = this.world.provider;
+
+        if (provider instanceof AetherWorldProvider) {
+            return ((AetherWorldProvider) provider).getAetherTime() % 24000L;
+        }
+
+        return this.world.getWorldInfo()
+            .getWorldTime() % 24000L;
     }
 
     /**
@@ -37,14 +64,6 @@ public class GuiSunAltarSlider extends GuiButton {
             if (this.dragging) {
                 this.sliderValue = (float) (mouseX - (this.xPosition + 4)) / (float) (this.width - 8);
 
-                long shouldTime = (long) (24000L * sliderValue);
-                long worldTime = world.getWorldInfo()
-                    .getWorldTime();
-                long remainder = worldTime % 24000L;
-                long add = shouldTime > remainder ? shouldTime - remainder : shouldTime + 24000 - remainder;
-
-                world.getWorldInfo()
-                    .setWorldTime(worldTime + add);
                 if (this.sliderValue < 0.0F) {
                     this.sliderValue = 0.0F;
                 }
@@ -52,7 +71,6 @@ public class GuiSunAltarSlider extends GuiButton {
                 if (this.sliderValue > 1.0F) {
                     this.sliderValue = 1.0F;
                 }
-
             }
 
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
@@ -75,8 +93,24 @@ public class GuiSunAltarSlider extends GuiButton {
 
     @Override
     public void drawButton(Minecraft par1Minecraft, int mouseX, int mouseY) {
-        this.sliderValue = (this.world.getWorldInfo()
-            .getWorldTime() % 24000) / 24000.0F;
+        if (!this.dragging) {
+            float synced = this.currentAetherTime() / 24000.0F;
+
+            if (this.pendingValue >= 0.0F) {
+                // Hold the released position until the server's time catches
+                // up to within one tick, then hand over to the synced value.
+                if (Math.abs(synced - this.pendingValue) < (2.0F / 24000.0F)) {
+                    this.pendingValue = -1.0F;
+                } else {
+                    this.sliderValue = this.pendingValue;
+                    super.drawButton(par1Minecraft, mouseX, mouseY);
+
+                    return;
+                }
+            }
+
+            this.sliderValue = synced;
+        }
 
         super.drawButton(par1Minecraft, mouseX, mouseY);
     }
@@ -104,6 +138,10 @@ public class GuiSunAltarSlider extends GuiButton {
     @Override
     public void mouseReleased(int mouseX, int mouseY) {
         this.dragging = false;
+
+        // Hold the knob at the released position until the server's synced
+        // time catches up, so it doesn't briefly rebound to the old time.
+        this.pendingValue = this.sliderValue;
 
         AetherNetwork.sendToServer(new PacketSetTime(this.sliderValue, Minecraft.getMinecraft().thePlayer.dimension));
     }

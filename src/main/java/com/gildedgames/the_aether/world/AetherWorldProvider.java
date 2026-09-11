@@ -39,25 +39,28 @@ public class AetherWorldProvider extends WorldProvider {
             if (!this.worldObj.isRemote) {
                 AetherData data = AetherData.getInstance(this.worldObj);
 
-                if (data.isEternalDay()) {
-                    if (!data.isShouldCycleCatchup()) {
-                        if (data.getAetherTime() != (worldTime % 24000L)
-                            && data.getAetherTime() != (worldTime + 1 % 24000L)
-                            && data.getAetherTime() != (worldTime - 1 % 24000L)) {
-                            data.setAetherTime(Math.floorMod(data.getAetherTime() - 1, 24000L));
-                        } else {
-                            data.setShouldCycleCatchup(true);
-                        }
-                    } else {
-                        data.setAetherTime(worldTime);
-                    }
+                long newAetherTime;
 
-                    this.aetherTime = data.getAetherTime();
-                    AetherNetwork.sendToAll(new PacketSendTime(this.aetherTime));
-                    data.setAetherTime(this.aetherTime);
+                if (data.isEternalDay()) {
+                    // The Aether's sky time is stored in AetherData. It is
+                    // advanced here by one tick per server tick so the sun
+                    // cycles; the world's own WorldInfo time cannot be
+                    // relied on for setting (in this environment writes to it
+                    // do not stick), so everything (altar, sleeping, the tick
+                    // advance) goes through AetherData. Once eternal day is
+                    // active we stay caught up — the "catch-up" phase is no
+                    // longer needed since we no longer track WorldInfo time.
+                    data.setShouldCycleCatchup(true);
+                    newAetherTime = (data.getAetherTime() + 1L) % 24000L;
+                    data.setAetherTime(newAetherTime);
                 } else {
-                    data.setAetherTime(6000);
+                    newAetherTime = 6000L;
+                    data.setAetherTime(6000L);
                 }
+
+                this.aetherTime = data.getAetherTime();
+
+                AetherNetwork.sendToAll(new PacketSendTime(this.aetherTime));
             }
         }
 
