@@ -86,10 +86,10 @@ public class TileEntityIncubator extends AetherTileEntity {
         }
 
         if (this.progress >= this.ticksRequired) {
-            if (this.getStackInSlot(1)
-                .getItem() instanceof ItemMoaEgg) {
-                ItemMoaEgg moaEgg = (ItemMoaEgg) this.getStackInSlot(1)
-                    .getItem();
+            ItemStack eggStack = this.getStackInSlot(1);
+
+            if (eggStack != null && eggStack.getItem() instanceof ItemMoaEgg) {
+                ItemMoaEgg moaEgg = (ItemMoaEgg) eggStack.getItem();
 
                 if (this.owner != null) {
                     this.owner.triggerAchievement(AchievementsAether.incubator);
@@ -100,7 +100,7 @@ public class TileEntityIncubator extends AetherTileEntity {
 
                     moa.setPlayerGrown(true);
                     moa.setGrowingAge(-24000);
-                    moa.setMoaType(moaEgg.getMoaTypeFromItemStack(this.getStackInSlot(1)));
+                    moa.setMoaType(moaEgg.getMoaTypeFromItemStack(eggStack));
 
                     for (int safeY = 0; !this.worldObj
                         .isAirBlock(this.xCoord, this.yCoord + safeY, this.zCoord); safeY++) {
@@ -110,7 +110,7 @@ public class TileEntityIncubator extends AetherTileEntity {
                     this.worldObj.spawnEntityInWorld(moa);
                 }
 
-                AetherHooks.onMoaHatched(moaEgg.getMoaTypeFromItemStack(this.getStackInSlot(1)), this);
+                AetherHooks.onMoaHatched(moaEgg.getMoaTypeFromItemStack(eggStack), this);
             }
 
             if (!this.worldObj.isRemote) {

@@ -3,6 +3,7 @@ package com.gildedgames.the_aether.tileentity;
 import java.util.Random;
 
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
@@ -41,30 +42,30 @@ public class TileEntityTreasureChest extends TileEntityChest {
     public void unlock(int kind) {
         this.kind = kind;
         Random random = new Random();
-        int p;
 
-        if (kind == 0) {
-            for (p = 0; p < 5 + random.nextInt(1); ++p) {
-                this.setInventorySlotContents(
-                    random.nextInt(this.getSizeInventory()),
-                    BronzeDungeon.getBronzeLoot(random));
-            }
+        int amount = 5 + random.nextInt(5);
+        int slots = this.getSizeInventory();
+
+        // Pick distinct random slots so loot never overwrites itself (rolling
+        // a slot twice silently discards a drop).
+        int[] slotOrder = new int[slots];
+
+        for (int i = 0; i < slots; ++i) {
+            slotOrder[i] = i;
         }
 
-        if (kind == 1) {
-            for (p = 0; p < 5 + random.nextInt(1); ++p) {
-                this.setInventorySlotContents(
-                    random.nextInt(this.getSizeInventory()),
-                    ComponentSilverDungeon.getSilverLoot(random));
-            }
+        for (int i = slots - 1; i > 0; --i) {
+            int j = random.nextInt(i + 1);
+            int tmp = slotOrder[i];
+            slotOrder[i] = slotOrder[j];
+            slotOrder[j] = tmp;
         }
 
-        if (kind == 2) {
-            for (p = 0; p < 5 + random.nextInt(1); ++p) {
-                this.setInventorySlotContents(
-                    random.nextInt(this.getSizeInventory()),
-                    ComponentGoldenDungeon.getGoldLoot(random));
-            }
+        for (int p = 0; p < amount && p < slots; ++p) {
+            ItemStack drop = kind == 0 ? BronzeDungeon.getBronzeLoot(random)
+                : kind == 1 ? ComponentSilverDungeon.getSilverLoot(random) : ComponentGoldenDungeon.getGoldLoot(random);
+
+            this.setInventorySlotContents(slotOrder[p], drop);
         }
 
         this.locked = false;
@@ -81,9 +82,18 @@ public class TileEntityTreasureChest extends TileEntityChest {
 
     @Override
     public Packet getDescriptionPacket() {
-        NBTTagCompound var1 = new NBTTagCompound();
-        this.writeToNBT(var1);
-        return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, var1);
+        // Only the lock state and dungeon type are needed on the client (the
+        // GUI uses getKind() for its background). Sending the full NBT here
+        // would leak the chest's inventory contents to every client that loads
+        // the chunk (an x-ray vector vanilla chests avoid by not overriding
+        // getDescriptionPacket at all). Contents are synced through the
+        // container window instead, as in vanilla.
+        NBTTagCompound nbt = new NBTTagCompound();
+
+        nbt.setBoolean("locked", this.locked);
+        nbt.setInteger("dungeonType", this.kind);
+
+        return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, nbt);
     }
 
     @Override
