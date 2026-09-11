@@ -178,13 +178,37 @@ are unchanged; its handler is now inert.
      creative. `EnchantmentHelper.getEnchantmentLevel` is null-safe, so the
      fortune/silk calls are safe for bare-hand breaks. No change needed.
 
-7. **Tile entity audit** — fix `TileEntityTreasureChest` loot roll
-   (`nextInt(1)` bug), stop syncing full inventory NBT to clients (send only
-   `locked`/`kind` and let vanilla chest-sync handle contents), fix
-   `closeInventory`/`openInventory` symmetry; review
-   `TileEntityEnchanter`/`Freezer`/`Incubator` for `updateEntity` infinite
-   loops, burn-time not saved to NBT, and processing logic that runs
-   client-side.
+7. ✅ **Tile entity audit (DONE)** — fixes to `TileEntityTreasureChest` and
+   `TileEntityIncubator`; the processing TEs were reviewed:
+   - `TileEntityTreasureChest.unlock`: `random.nextInt(1)` always returned 0
+     (loot was always exactly 5 items). Now `5 + nextInt(5)` (5–9, the
+     intended range). Also, loot slots were rolled with replacement
+     (`random.nextInt(getSizeInventory())` per drop) so two drops could land
+     on the same slot and silently discard one; slots are now shuffled and
+     picked distinctly.
+   - `TileEntityTreasureChest.getDescriptionPacket`: called `writeToNBT`,
+     which serialized the **full chest inventory** to every client that loads
+     the chunk or receives the packet — an x-ray/leak vector vanilla chests
+     don't have (base `TileEntity.getDescriptionPacket` returns null; vanilla
+     `TileEntityChest` doesn't override it; contents sync via the container
+     window only). Now sends just `locked` + `dungeonType`, which is all the
+     client needs (`GuiTreasureChest` uses `getKind()` for its background).
+     Tracked through `Chunk`/`S21PacketChunkData` source: 1.7.10 chunk-data
+     packets don't serialize tile entities, so this packet is the only leak
+     path — now closed.
+   - `TileEntityIncubator.updateEntity`: `getStackInSlot(1).getItem()` was
+     dereferenced without a null check when `progress >= ticksRequired`
+     (hopper/edge races could leave the egg slot empty) → NPE crash. Guarded,
+     and the egg stack is now fetched once.
+   - Reviewed, no change needed (documented): `closeInventory` mirrors vanilla
+     `TileEntityChest.closeInventory` exactly (treasure block `extends
+     BlockChest`, so the unconditional decrement is equivalent); all three
+     processing TEs persist `progress`/`powerRemaining` to NBT (Incubator's
+     `ticksRequired` is a hardcoded 5700 constant — no need to save); no
+     infinite loops in `updateEntity` (power drains, progress resets, fuel
+     refill terminates); all inventory-mutating and entity-spawning logic runs
+     inside `!worldObj.isRemote` (client-side execution is cosmetic — progress
+     resets, achievement toasts — or event-post-only).
 
 8. **Static/global state audit** — eliminate or scope `AetherLore.hasKey`
    (make it per-player), check `AetherEventHandler`, `AetherWorld`, and
