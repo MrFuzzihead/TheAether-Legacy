@@ -3,6 +3,7 @@ package com.gildedgames.the_aether.entities.effects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.potion.Potion;
@@ -61,9 +62,9 @@ public class PotionInebriation extends Potion {
                     if (iPlayerAether != null) {
                         PlayerAether playerAether = (PlayerAether) iPlayerAether;
 
-                        if (!player.worldObj.isRemote) {
+                        if (!player.worldObj.isRemote && player instanceof EntityPlayerMP) {
                             playerAether.setPoisoned();
-                            AetherNetwork.sendToAll(new PacketSendPoison(player));
+                            AetherNetwork.sendTo(new PacketSendPoison(player), (EntityPlayerMP) player);
                         }
                     }
                 }

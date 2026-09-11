@@ -130,7 +130,10 @@ public class InventoryAccessories implements IAccessoryInventory {
     @Override
     public void markDirty() {
         if (!this.playerAether.getEntity().worldObj.isRemote && this.playerAether.getEntity() instanceof EntityPlayer) {
-            AetherNetwork.sendToAll(new PacketAccessory(this.playerAether));
+            // Accessories render on the player model, so only nearby players
+            // need the update (was broadcast to every player on the server).
+            AetherNetwork
+                .sendToAllAround(new PacketAccessory(this.playerAether), this.playerAether.getEntity(), 512.0D);
         }
     }
 

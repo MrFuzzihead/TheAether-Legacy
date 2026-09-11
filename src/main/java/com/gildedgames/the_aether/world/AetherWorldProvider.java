@@ -24,6 +24,18 @@ public class AetherWorldProvider extends WorldProvider {
     private boolean shouldCycleCatchup;
     private long aetherTime = 6000;
 
+    // Change-detection caches so the server only broadcasts the eternal-day
+    // state when it actually changes (it nearly never does) instead of every
+    // tick.
+    private boolean eternalDaySynced;
+    private boolean lastSentEternalDay;
+    private boolean shouldCycleSynced;
+    private boolean lastSentShouldCycle;
+
+    // Throttles the aether-time sync packet to at most once per second.
+    private long lastSentAetherTime = -1;
+    private long lastTimeSyncTick = Long.MIN_VALUE;
+
     public AetherWorldProvider() {
         super();
     }
@@ -40,11 +52,17 @@ public class AetherWorldProvider extends WorldProvider {
                 AetherData data = AetherData.getInstance(this.worldObj);
 
                 if (data.isEternalDay()) {
+                    long currentAether = data.getAetherTime();
+
                     if (!data.isShouldCycleCatchup()) {
-                        if (data.getAetherTime() != (worldTime % 24000L)
-                            && data.getAetherTime() != (worldTime + 1 % 24000L)
-                            && data.getAetherTime() != (worldTime - 1 % 24000L)) {
-                            data.setAetherTime(Math.floorMod(data.getAetherTime() - 1, 24000L));
+                        // (worldTime +/- 1) % 24000 must be parenthesized; the
+                        // % operator binds tighter than +/-, so the original
+                        // code compared against worldTime+1 / worldTime-1
+                        // (unmodded), breaking the intended +/-1 tolerance.
+                        if (currentAether != Math.floorMod(worldTime, 24000L)
+                            && currentAether != Math.floorMod(worldTime + 1L, 24000L)
+                            && currentAether != Math.floorMod(worldTime - 1L, 24000L)) {
+                            data.setAetherTime(Math.floorMod(currentAether - 1L, 24000L));
                         } else {
                             data.setShouldCycleCatchup(true);
                         }
@@ -53,10 +71,22 @@ public class AetherWorldProvider extends WorldProvider {
                     }
 
                     this.aetherTime = data.getAetherTime();
-                    AetherNetwork.sendToAll(new PacketSendTime(this.aetherTime));
-                    data.setAetherTime(this.aetherTime);
-                } else {
-                    data.setAetherTime(6000);
+
+                    // Sync the aether time to the dimension's clients at most
+                    // once per 20 ticks (once per second); a second of latency
+                    // is imperceptible on a 20-minute day/night cycle. The
+                    // joining-player sync happens in the dimension-change
+                    // handler.
+                    long totalTime = this.worldObj.getTotalWorldTime();
+
+                    if (this.aetherTime != this.lastSentAetherTime && totalTime - this.lastTimeSyncTick >= 20L) {
+                        this.lastSentAetherTime = this.aetherTime;
+                        this.lastTimeSyncTick = totalTime;
+                        AetherNetwork
+                            .sendToDimension(new PacketSendTime(this.aetherTime), AetherConfig.getAetherDimensionID());
+                    }
+                } else if (data.getAetherTime() != 6000L) {
+                    data.setAetherTime(6000L);
                 }
             }
         }
@@ -80,6 +110,36 @@ public class AetherWorldProvider extends WorldProvider {
 
     public void setIsEternalDay(boolean set) {
         this.eternalDay = set;
+    }
+
+    /**
+     * Returns true (once) when the eternal-day value changes from what was
+     * last broadcast, so the server only re-broadcasts it on change.
+     */
+    public boolean needsEternalDaySync(boolean value) {
+        if (!this.eternalDaySynced || value != this.lastSentEternalDay) {
+            this.lastSentEternalDay = value;
+            this.eternalDaySynced = true;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns true (once) when the should-cycle-catchup value changes from
+     * what was last broadcast.
+     */
+    public boolean needsShouldCycleSync(boolean value) {
+        if (!this.shouldCycleSynced || value != this.lastSentShouldCycle) {
+            this.lastSentShouldCycle = value;
+            this.shouldCycleSynced = true;
+
+            return true;
+        }
+
+        return false;
     }
 
     public boolean getIsEternalDay() {

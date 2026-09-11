@@ -231,11 +231,41 @@ are unchanged; its handler is now inert.
      `PotionInebriation.inebriation` are init-time only. Nothing
      client-controllable or cross-player remains.
 
-9. **Performance pass** — profile-critical paths: `ChunkProviderAether` +
-   `MapGen*` world gen (allocation churn, per-chunk `new Random()`, redundant
-   block scans), entity AI tick costs, `sendToAllInOurWorld` O(players)
-   loops, particle spawning in `AetherOverlay`, and client render loops; flag
-   any per-tick allocations that can be hoisted.
+9. ✅ **Performance pass (DONE)** — audited worldgen, per-tick/per-frame client
+   paths, entity scans and packet fan-out:
+   - **Removed the per-tick O(loaded-entities) dungeon-key scan**
+     (`AetherEventHandler.onWorldTick` swept every `EntityItem` in every world
+     at 20 tps). Now handled by `EntityJoinWorldEvent`, which fires exactly
+     when the item spawns.
+   - **Eternal-day / should-cycle packets no longer broadcast every tick**: the
+     per-tick `sendToAll(PacketSendEternalDay/ShouldCycle)` was replaced with
+     change-detection (cached on `AetherWorldProvider`) + `sendToDimension`.
+     The values change ~once ever (Sun Spirit death).
+   - **Aether-time packet throttled**: `calculateCelestialAngle` was sending
+     `PacketSendTime` to all players every server call (≈20/s). Now at most
+     once per 20 ticks (1/s) via `sendToDimension` — a second of latency is
+     imperceptible on a 20-minute day cycle — plus redundant `AetherData`
+     writes are skipped when unchanged.
+   - **Fixed an operator-precedence bug** in the eternal-day catchup check:
+     `(worldTime + 1 % 24000L)` / `(worldTime - 1 % 24000L)` bound `%` tighter
+     than `+`/`-`, so the ±1 tolerance compared against unmodded `worldTime±1`
+     (always true) — the intended early-catchup-termination never fired. Now
+     uses `Math.floorMod`.
+   - **Late-joiner sync preserved**: since the eternal-day packets are no
+     longer broadcast every tick, `PlayerAetherEvents` now sends the current
+     eternal-day / should-cycle / aether-time state to a player on login and on
+     dimension change (only when entering the Aether).
+   - **Narrowed packet fan-out** (was `sendToAll` = every player in every
+     dimension): halo/glow/cape/accessories use `sendToAllAround` (512 blocks,
+     covers max render distance for model rendering); poison/portal/dialog/
+     shard-count/seen-dialog use `sendTo`(owner) since those consumers
+     (AetherOverlay, spirit-dialog gating) are local to the owning player.
+     Added `AetherNetwork.sendToAllAround/sendToDimension` helpers.
+   - **Verified fine, no change**: `ChunkProviderAether` reuses its noise
+     buffers (`pnr`/`ar`/`br`, `buffer`) across chunks; the 32768-block array
+     per chunk matches vanilla; extended-reach AABB query is click-gated;
+     `AetherOverlay`/`ScaledResolution` allocations are per-frame cheap;
+     per-tick `AetherConfig` reads are in-memory map lookups.
 
 10. **Client-side crash cleanup** — `GuiDialogue` bare
     `printStackTrace()`, `AetherMainMenu` reflective `Desktop` launch
