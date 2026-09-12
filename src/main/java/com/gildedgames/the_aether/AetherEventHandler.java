@@ -364,6 +364,21 @@ public class AetherEventHandler {
             if (provider instanceof AetherWorldProvider) {
                 AetherWorldProvider providerAether = (AetherWorldProvider) provider;
 
+                // The Aether shares its WorldInfo with the overworld in this
+                // environment (the same reason its clock had to move into
+                // AetherData), so vanilla's WorldInfo-backed rain/thunder
+                // state leaks in: this world's server ramps its rain
+                // strengths off the overworld's flags and broadcasts them to
+                // this dimension. The Aether has no weather — pin the
+                // strengths to zero every tick so skylight darkening,
+                // lightning strikes and rain-driven game logic never fire
+                // here (the per-tick ramp peaks at 0.01, far below
+                // isRaining()'s 0.2 threshold).
+                event.world.prevRainingStrength = 0.0F;
+                event.world.rainingStrength = 0.0F;
+                event.world.prevThunderingStrength = 0.0F;
+                event.world.thunderingStrength = 0.0F;
+
                 providerAether.setIsEternalDay(data.isEternalDay());
 
                 // Only broadcast when the shared aether-day state actually

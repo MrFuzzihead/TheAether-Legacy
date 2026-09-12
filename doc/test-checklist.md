@@ -167,6 +167,17 @@ main thread). Nothing to test — included for completeness.
 
 ---
 
+## Section W — Weather independence
+
+- [ ] Wait for (or force, `/weather rain` + `/toggledownfall`) overworld rain, then enter the Aether
+  - Aether sky stays clear and bright: no lightmap darkening, sun unobscured, no rain
+    particles or thunder (shared-WorldInfo rain leak closed — server & client
+    strengths pinned to zero while in the Aether)
+- [ ] Return to the overworld while raining
+  - Overworld rain behaves normally (fix only touches the Aether dimension)
+
+---
+
 ## Section 10 — Client crash hardening (phase 10)
 
 - [ ] Click through Valkyrie Queen / Sun Spirit dialogue lines rapidly

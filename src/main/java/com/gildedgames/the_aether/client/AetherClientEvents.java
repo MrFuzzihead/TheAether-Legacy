@@ -57,6 +57,7 @@ import com.gildedgames.the_aether.network.packets.PacketExtendedAttack;
 import com.gildedgames.the_aether.network.packets.PacketOpenContainer;
 import com.gildedgames.the_aether.player.PlayerAether;
 import com.gildedgames.the_aether.player.perks.AetherRankings;
+import com.gildedgames.the_aether.world.AetherWorldProvider;
 
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.ObfuscationReflectionHelper;
@@ -76,6 +77,19 @@ public class AetherClientEvents {
 
         if (phase == TickEvent.Phase.END) {
             if (type.equals(TickEvent.Type.CLIENT)) {
+                // The Aether shares its WorldInfo with the overworld here, so
+                // when the overworld rains the server ramps this world's rain
+                // strengths too (S2B weather packets are sent per-dimension).
+                // The Aether has no weather: zero the strengths every tick so
+                // the lightmap does not darken and the sun is not obscured
+                // while standing in the Aether during overworld rain.
+                if (mc.theWorld != null && mc.theWorld.provider instanceof AetherWorldProvider) {
+                    mc.theWorld.prevRainingStrength = 0.0F;
+                    mc.theWorld.rainingStrength = 0.0F;
+                    mc.theWorld.prevThunderingStrength = 0.0F;
+                    mc.theWorld.thunderingStrength = 0.0F;
+                }
+
                 if (!AetherConfig.triviaDisabled()) {
                     if (!(mc.loadingScreen instanceof AetherLoadingScreen)) {
                         mc.loadingScreen = new AetherLoadingScreen(mc);
