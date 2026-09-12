@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.network;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 
 import com.gildedgames.the_aether.Aether;
@@ -100,6 +101,24 @@ public class AetherNetwork {
 
     public static void sendTo(IMessage message, EntityPlayerMP player) {
         INSTANCE.sendTo(message, player);
+    }
+
+    /**
+     * Sends to every player within {@code range} blocks of the given entity
+     * (used for per-player state that other nearby clients need, e.g. perks,
+     * capes and accessories rendered on the player model). 512 blocks covers
+     * the maximum render distance while skipping far-away and
+     * other-dimension players.
+     */
+    public static void sendToAllAround(IMessage message, Entity entity, double range) {
+        INSTANCE.sendToAllAround(
+            message,
+            new NetworkRegistry.TargetPoint(entity.dimension, entity.posX, entity.posY, entity.posZ, range));
+    }
+
+    /** Sends to every player in the given dimension. */
+    public static void sendToDimension(IMessage message, int dimensionId) {
+        INSTANCE.sendToDimension(message, dimensionId);
     }
 
 }

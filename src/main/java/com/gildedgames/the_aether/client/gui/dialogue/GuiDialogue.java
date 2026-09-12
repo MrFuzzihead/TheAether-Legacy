@@ -1,6 +1,5 @@
 package com.gildedgames.the_aether.client.gui.dialogue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,7 +7,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.util.ChatComponentText;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class GuiDialogue extends GuiScreen {
+
+    private static final Logger logger = LogManager.getLogger();
 
     private ArrayList<DialogueOption> dialogueOptions = new ArrayList<DialogueOption>();
 
@@ -112,8 +116,11 @@ public class GuiDialogue extends GuiScreen {
 
                     try {
                         this.dialogueClicked(dialogue);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) {
+                        // Catch broadly so a runtime failure in a dialogue
+                        // handler can't crash the whole client; log it instead
+                        // of printing to stderr.
+                        logger.error("Failed to handle dialogue click", e);
                     }
                 }
             }
@@ -122,7 +129,7 @@ public class GuiDialogue extends GuiScreen {
         super.mouseClicked(mouseX, mouseY, mouseButton);
     }
 
-    public void dialogueClicked(DialogueOption dialogue) throws IOException {
+    public void dialogueClicked(DialogueOption dialogue) {
 
     }
 

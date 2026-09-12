@@ -21,6 +21,7 @@ import net.minecraft.util.MovingObjectPosition.MovingObjectType;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.EntityStruckByLightningEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
@@ -363,23 +364,55 @@ public class AetherEventHandler {
             if (provider instanceof AetherWorldProvider) {
                 AetherWorldProvider providerAether = (AetherWorldProvider) provider;
 
+                // The Aether shares its WorldInfo with the overworld in this
+                // environment (the same reason its clock had to move into
+                // AetherData), so vanilla's WorldInfo-backed rain/thunder
+                // state leaks in: this world's server ramps its rain
+                // strengths off the overworld's flags and broadcasts them to
+                // this dimension. The Aether has no weather — pin the
+                // strengths to zero every tick so skylight darkening,
+                // lightning strikes and rain-driven game logic never fire
+                // here (the per-tick ramp peaks at 0.01, far below
+                // isRaining()'s 0.2 threshold).
+                event.world.prevRainingStrength = 0.0F;
+                event.world.rainingStrength = 0.0F;
+                event.world.prevThunderingStrength = 0.0F;
+                event.world.thunderingStrength = 0.0F;
+
                 providerAether.setIsEternalDay(data.isEternalDay());
-                AetherNetwork.sendToAll(new PacketSendEternalDay(providerAether.getIsEternalDay()));
+
+                // Only broadcast when the shared aether-day state actually
+                // changed instead of every tick.
+                if (providerAether.needsEternalDaySync(data.isEternalDay())) {
+                    AetherNetwork.sendToDimension(
+                        new PacketSendEternalDay(providerAether.getIsEternalDay()),
+                        AetherConfig.getAetherDimensionID());
+                }
 
                 providerAether.setShouldCycleCatchup(data.isShouldCycleCatchup());
-                AetherNetwork.sendToAll(new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()));
+
+                if (providerAether.needsShouldCycleSync(data.isShouldCycleCatchup())) {
+                    AetherNetwork.sendToDimension(
+                        new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()),
+                        AetherConfig.getAetherDimensionID());
+                }
             }
         }
+    }
 
-        for (Object entity : event.world.loadedEntityList) {
-            if (entity instanceof EntityItem) {
-                EntityItem entityItem = (EntityItem) entity;
+    @SubscribeEvent
+    public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+        // Dungeon keys are made invulnerable so they never despawn. Previously
+        // this was a per-tick scan of every loaded entity in every world (an
+        // O(entities) sweep at 20 tps); the join event fires exactly when the
+        // item spawns, which is strictly better.
+        if (!event.world.isRemote && event.entity instanceof EntityItem) {
+            EntityItem entityItem = (EntityItem) event.entity;
 
-                if (entityItem.getEntityItem()
-                    .getItem() == ItemsAether.dungeon_key) {
-                    ObfuscationReflectionHelper
-                        .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
-                }
+            if (entityItem.getEntityItem()
+                .getItem() == ItemsAether.dungeon_key) {
+                ObfuscationReflectionHelper
+                    .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
             }
         }
     }

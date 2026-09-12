@@ -40,6 +40,10 @@ public class GuiAetherInGame extends Gui {
             return;
         }
 
+        if (this.mc.thePlayer == null) {
+            return;
+        }
+
         PlayerAether player = PlayerAether.get(this.mc.thePlayer);
 
         if (player.getEntity() != null) {
