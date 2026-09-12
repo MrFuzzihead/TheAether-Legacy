@@ -77,7 +77,14 @@ public class TileEntityTreasureChest extends TileEntityChest {
 
     @Override
     public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
-        this.readFromNBT(pkt.func_148857_g());
+        // Read only the fields the description packet carries. Calling
+        // readFromNBT here would zero this tile entity's coordinates (the
+        // packet intentionally omits x/y/z), teleporting the client-side
+        // chest to 0,0,0 and leaving it invisible at its real position.
+        NBTTagCompound nbt = pkt.func_148857_g();
+
+        this.locked = nbt.getBoolean("locked");
+        this.kind = nbt.getInteger("dungeonType");
     }
 
     @Override
