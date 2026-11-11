@@ -1214,14 +1214,14 @@ mod. Neither test source set is included in the published mod jar.
 JaCoCo 0.8.16 is attached to the unit-test JVM and `check` now depends on
 `jacocoTestReport`.
 
-Current baseline from this workspace (18 tests, all passing):
+Current baseline from this workspace (20 tests, all passing):
 
 | Counter | Covered | Missed | Coverage |
 |---|---:|---:|---:|
-| LINE | 340 | 19,161 | 1.74% |
-| BRANCH | 63 | 9,180 | 0.68% |
-| METHOD | 83 | 2,583 | 3.11% |
-| CLASS | 22 | 381 | 5.46% |
+| LINE | 368 | 19,141 | 1.89% |
+| BRANCH | 70 | 9,193 | 0.76% |
+| METHOD | 92 | 2,575 | 3.45% |
+| CLASS | 23 | 380 | 5.71% |
 
 The low baseline is expected: the initial suite only covers pure utility/API
 code, while most of the mod needs the game. This is a regression baseline, not
@@ -1257,7 +1257,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 94/94 checks passed
+[AETHER-GAMETEST] 100/100 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1281,4 +1281,25 @@ The first batch of findings has been applied:
 - B08 — Slider no longer re-focuses itself after death.
 
 Regression checks for B03, B04, B05 and B06 were added to the game-test mod.
-The in-game baseline is now **94/94 checks passed**.
+After the first batch the in-game baseline was **94/94 checks passed**; it is
+now **100/100** after the second batch.
+
+### Second batch fix status
+
+- B09 — Aether time now advances once per server world tick in
+  `AetherWorldProvider.updateAetherTime()`; `calculateCelestialAngle()` is
+  read-only and preserves the independent Aether clock.
+- B37 — `WorldTickEvent` now handles only `Phase.END`, and `AetherData` is
+  resolved only for Aether worlds.
+- B10 — zanite accessory dig-speed bonuses are applied to `BreakSpeed.newSpeed`
+  and the bonus is no longer added to the original value a second time.
+- B11 — accessory drops clear their inventory slots, and
+  `setAccessorySlot(type, null)` now clears instead of throwing.
+- B12 — portal exit detection checks the player's bounding box rather than
+  comparing the same minimum corner twice.
+- B13 — dead clouds are removed while iterating in reverse, so no entry is
+  skipped.
+
+Added game-test coverage for B09/B37 and unit coverage for the accessory drop
+and removal paths. The baseline is now **100/100 in-game checks** and **20 unit
+tests**.

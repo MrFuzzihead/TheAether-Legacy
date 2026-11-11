@@ -60,7 +60,7 @@ public class InventoryAccessories implements IAccessoryInventory {
                     .getMaxDamage()) * 3F)));
         }
 
-        return f == original ? original : f + original;
+        return f;
     }
 
     @Override
@@ -171,6 +171,7 @@ public class InventoryAccessories implements IAccessoryInventory {
             if (stack != null) {
                 this.playerAether.getEntity()
                     .dropItem(stack.getItem(), stack.stackSize);
+                this.stacks.set(i, null);
             }
         }
 
@@ -214,6 +215,11 @@ public class InventoryAccessories implements IAccessoryInventory {
 
     @Override
     public void setAccessorySlot(AccessoryType type, ItemStack stack) {
+        if (stack == null) {
+            this.setInventorySlotContents(this.orderedList.func_148747_b(type), null);
+            return;
+        }
+
         if (stack.getItem() instanceof ItemAccessory) {
             if (this.getStackInSlot(type) == null) {
                 this.setInventorySlotContents(this.orderedList.func_148747_b(type), stack);

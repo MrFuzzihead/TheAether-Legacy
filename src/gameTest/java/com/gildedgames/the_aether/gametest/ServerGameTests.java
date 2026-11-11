@@ -16,6 +16,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 
 import com.gildedgames.the_aether.AetherConfig;
+import com.gildedgames.the_aether.AetherEventHandler;
 import com.gildedgames.the_aether.api.AetherAPI;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.entities.EntitiesAether;
@@ -25,7 +26,12 @@ import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
 import com.gildedgames.the_aether.registry.AetherLore;
 import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
+import com.gildedgames.the_aether.world.AetherData;
+import com.gildedgames.the_aether.world.AetherWorldProvider;
 import com.google.common.collect.Multimap;
+
+import cpw.mods.fml.common.gameevent.TickEvent;
+import cpw.mods.fml.relauncher.Side;
 
 /**
  * In-game assertions for The Aether Legacy.
@@ -63,6 +69,7 @@ public final class ServerGameTests {
         checkLoreLookup();
         checkRecipes();
         checkBlockPlacement();
+        checkAetherTimeTick();
 
         return failures;
     }
@@ -246,6 +253,48 @@ public final class ServerGameTests {
             "skyroot log smelts to charcoal",
             FurnaceRecipes.smelting()
                 .getSmeltingResult(new ItemStack(BlocksAether.skyroot_log, 1, 1)) != null);
+    }
+
+    private static void checkAetherTimeTick() {
+        WorldServer aetherWorld = MinecraftServer.getServer()
+            .worldServerForDimension(AetherConfig.getAetherDimensionID());
+        check("Aether world loads", aetherWorld != null && aetherWorld.provider instanceof AetherWorldProvider);
+
+        if (aetherWorld == null || !(aetherWorld.provider instanceof AetherWorldProvider)) {
+            return;
+        }
+
+        AetherWorldProvider provider = (AetherWorldProvider) aetherWorld.provider;
+        AetherData data = AetherData.getInstance(aetherWorld);
+        boolean previousEternalDay = data.isEternalDay();
+        long previousTime = data.getAetherTime();
+
+        try {
+            data.setEternalDay(true);
+            data.setAetherTime(100L);
+
+            AetherEventHandler handler = new AetherEventHandler();
+
+            handler.onWorldTick(new TickEvent.WorldTickEvent(Side.SERVER, TickEvent.Phase.START, aetherWorld));
+            check("START phase leaves Aether time unchanged", data.getAetherTime() == 100L);
+
+            handler.onWorldTick(new TickEvent.WorldTickEvent(Side.SERVER, TickEvent.Phase.END, aetherWorld));
+            check("END phase advances Aether time exactly once", data.getAetherTime() == 101L);
+
+            provider.updateAetherTime();
+            check("Aether time advances again", data.getAetherTime() == 102L);
+            check("Aether cycle catchup is enabled", data.isShouldCycleCatchup());
+
+            provider.setAetherTime(500L);
+            float firstAngle = provider.calculateCelestialAngle(0L, 0.0F);
+            float secondAngle = provider.calculateCelestialAngle(0L, 0.0F);
+            check(
+                "celestial angle calculation is side-effect free",
+                firstAngle == secondAngle && provider.getAetherTime() == 500L);
+        } finally {
+            data.setEternalDay(previousEternalDay);
+            data.setAetherTime(previousTime);
+        }
     }
 
     private static void checkBlockPlacement() {

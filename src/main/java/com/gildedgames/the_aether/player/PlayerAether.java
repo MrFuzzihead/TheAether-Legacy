@@ -227,10 +227,8 @@ public class PlayerAether implements IPlayerAether {
             }
         }
 
-        for (int i = 0; i < this.clouds.size(); ++i) {
-            Entity entity = this.clouds.get(i);
-
-            if (entity.isDead) {
+        for (int i = this.clouds.size() - 1; i >= 0; --i) {
+            if (this.clouds.get(i).isDead) {
                 this.clouds.remove(i);
             }
         }
@@ -306,14 +304,7 @@ public class PlayerAether implements IPlayerAether {
             if (this.getEntity().worldObj
                 .getBlock((int) this.getEntity().posX, (int) this.getEntity().posY - 1, (int) this.getEntity().posZ)
                 != Blocks.air) {
-                AxisAlignedBB playerBounding = this.getEntity().boundingBox;
-
-                if (this.getEntity().worldObj
-                    .getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
-                    != BlocksAether.aether_portal
-                    && this.getEntity().worldObj
-                        .getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
-                        != BlocksAether.aether_portal) {
+                if (!this.isInsideBlock(BlocksAether.aether_portal)) {
                     this.inPortal = false;
                 }
             }
