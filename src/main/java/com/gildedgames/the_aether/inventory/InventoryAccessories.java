@@ -39,29 +39,24 @@ public class InventoryAccessories implements IAccessoryInventory {
         float f = original;
 
         if (this.wearingAccessory(new ItemStack(ItemsAether.zanite_pendant))) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.PENDANT)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.PENDANT)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.PENDANT));
         }
 
         if (this.getStackInSlot(AccessoryType.RING) != null && this.getStackInSlot(AccessoryType.RING)
             .getItem() == ItemsAether.zanite_ring) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.RING)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.RING)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.RING));
         }
 
         if (this.getStackInSlot(AccessoryType.EXTRA_RING) != null && this.getStackInSlot(AccessoryType.EXTRA_RING)
             .getItem() == ItemsAether.zanite_ring) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.EXTRA_RING)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.EXTRA_RING)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.EXTRA_RING));
         }
 
         return f;
+    }
+
+    static float applyZaniteBonus(float original, ItemStack stack) {
+        return original * (1F + ((float) stack.getItemDamage()) / ((float) stack.getMaxDamage() * 3F));
     }
 
     @Override

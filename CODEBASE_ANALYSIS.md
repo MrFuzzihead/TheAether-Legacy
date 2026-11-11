@@ -1546,3 +1546,19 @@ The baseline is now **125/125 in-game checks** and **53 unit tests**.
 Remaining refactor items: unify the two dungeon base classes, centralize item
 drop policies, finish optional GUI localization (`AetherMainMenu`, dead
 `GuiAetherPerks`), and add the remaining pure-logic tests.
+
+### Refactor batch 4 status
+
+Completed refactors:
+
+- **Perk GUI localization (item 8)** — all `GuiAetherPerks` labels/buttons now
+  use `I18n` keys, completing the originally listed Sun Altar, Lore and perk
+  GUI strings.
+- **Pure-logic coverage (item 10, partial)** — extracted reusable zanite
+  damage-speed and accessory strength calculations and added tests for both.
+
+The baseline is now **125/125 in-game checks** and **57 unit tests**.
+
+Remaining refactor items: unify the two dungeon base classes, centralize item
+drop policies, optional `AetherMainMenu` localization, and the remaining
+pure-logic tests.

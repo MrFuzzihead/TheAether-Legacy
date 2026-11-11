@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.inventory;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.mockito.Mockito.mock;
@@ -47,6 +48,15 @@ public class InventoryAccessoriesTest {
 
         verify(entityPlayer).dropItem(item, 3);
         assertNull(inventory.getStackInSlot(0));
+    }
+
+    @Test
+    public void zaniteBonusScalesWithDamage() {
+        Item item = new Item().setMaxDamage(300);
+        ItemStack stack = new ItemStack(item);
+        stack.setItemDamage(150);
+
+        assertEquals(1.1666666F, InventoryAccessories.applyZaniteBonus(1.0F, stack), 0.0001F);
     }
 
     @Test

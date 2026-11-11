@@ -67,4 +67,18 @@ public class LanguageKeyTest {
             assertTrue("missing " + key, keys.contains(key));
         }
     }
+
+    @Test
+    public void perkGuiStringsAreLocalized() throws IOException {
+        Set<String> keys = loadKeys();
+
+        String[] perkKeys = { "gui.perks.moa_customizer", "gui.perks.developer_perks", "gui.perks.enable_halo",
+            "gui.perks.default_skin", "gui.perks.use_default", "gui.perks.confirm_skin", "gui.perks.donator_options",
+            "gui.perks.leg_beak_color", "gui.perks.body_color", "gui.perks.body_marking_color", "gui.perks.eye_color",
+            "gui.perks.wing_color", "gui.perks.wing_marking_color" };
+
+        for (String key : perkKeys) {
+            assertTrue("missing " + key, keys.contains(key));
+        }
+    }
 }

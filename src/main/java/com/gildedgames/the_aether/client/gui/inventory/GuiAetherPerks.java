@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.gui.inventory.GuiInventory;
+import net.minecraft.client.resources.I18n;
 
 import org.lwjgl.input.Keyboard;
 
@@ -108,11 +109,18 @@ public class GuiAetherPerks extends GuiScreen {
         this.guiLeft = (this.width - 176) / 2;
         this.guiTop = (this.height - 166) / 2;
 
-        this.buttonList.add(this.perkMoa = new GuiButton(1, 4, 17, 100, 20, "Moa Customizer"));
-        this.buttonList.add(this.perkHalo = new GuiButton(5, 110, 17, 100, 20, "Developer Perks"));
-
+        this.buttonList.add(this.perkMoa = new GuiButton(1, 4, 17, 100, 20, I18n.format("gui.perks.moa_customizer")));
         this.buttonList
-            .add(this.enableHalo = new GuiButton(6, this.width / 2 - 50, this.height - 20, 100, 20, "Enable Halo: "));
+            .add(this.perkHalo = new GuiButton(5, 110, 17, 100, 20, I18n.format("gui.perks.developer_perks")));
+
+        this.buttonList.add(
+            this.enableHalo = new GuiButton(
+                6,
+                this.width / 2 - 50,
+                this.height - 20,
+                100,
+                20,
+                I18n.format("gui.perks.enable_halo") + " "));
         this.buttonList.add(
             this.defualtSkin = new GuiButton(
                 2,
@@ -120,9 +128,15 @@ public class GuiAetherPerks extends GuiScreen {
                 this.height - 20,
                 100,
                 20,
-                "Default skin: " + this.player.donatorMoaSkin.shouldUseDefualt()));
-        this.buttonList
-            .add(this.confirmPreference = new GuiButton(4, this.width / 2, this.height - 20, 100, 20, "Confirm Skin"));
+                I18n.format("gui.perks.default_skin") + " " + this.player.donatorMoaSkin.shouldUseDefualt()));
+        this.buttonList.add(
+            this.confirmPreference = new GuiButton(
+                4,
+                this.width / 2,
+                this.height - 20,
+                100,
+                20,
+                I18n.format("gui.perks.confirm_skin")));
 
         if (!AetherRankings.isRankedPlayer(
             this.player.getEntity()
@@ -218,7 +232,8 @@ public class GuiAetherPerks extends GuiScreen {
         } else if (button.id == 2) {
             boolean enableDefualt = this.player.donatorMoaSkin.shouldUseDefualt() ? false : true;
 
-            this.defualtSkin.displayString = "Use Default: " + Boolean.toString(enableDefualt);
+            this.defualtSkin.displayString = I18n.format("gui.perks.use_default") + " "
+                + Boolean.toString(enableDefualt);
             this.player.donatorMoaSkin.shouldUseDefualt(enableDefualt);
         } else if (button.id == 4) {
             AetherNetwork.sendToServer(
@@ -243,7 +258,7 @@ public class GuiAetherPerks extends GuiScreen {
                         .getEntityId(),
                     EnumAetherPerkType.Halo,
                     enableHalo));
-            this.enableHalo.displayString = "Enable Halo: " + Boolean.toString(enableHalo);
+            this.enableHalo.displayString = I18n.format("gui.perks.enable_halo") + " " + Boolean.toString(enableHalo);
         }
     }
 
@@ -251,7 +266,7 @@ public class GuiAetherPerks extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
 
-        this.drawCenteredString(this.fontRendererObj, "Donator Options", 45, 4, 16777215);
+        this.drawCenteredString(this.fontRendererObj, I18n.format("gui.perks.donator_options"), 45, 4, 16777215);
 
         if (this.enableMoaEditor) {
             GuiInventory.func_147046_a(
@@ -264,26 +279,46 @@ public class GuiAetherPerks extends GuiScreen {
 
             /* Left Side */
 
-            this.drawString(this.fontRendererObj, "Leg/Beak Color", (this.width / 2) - 170, 55, 16777215);
-
-            this.drawString(this.fontRendererObj, "Body Color", (this.width / 2) - 160, this.height / 2, 16777215);
+            this.drawString(
+                this.fontRendererObj,
+                I18n.format("gui.perks.leg_beak_color"),
+                (this.width / 2) - 170,
+                55,
+                16777215);
 
             this.drawString(
                 this.fontRendererObj,
-                "Body Marking Color",
+                I18n.format("gui.perks.body_color"),
+                (this.width / 2) - 160,
+                this.height / 2,
+                16777215);
+
+            this.drawString(
+                this.fontRendererObj,
+                I18n.format("gui.perks.body_marking_color"),
                 (this.width / 2) - 180,
                 this.height - 55,
                 16777215);
 
             /* Right Side */
 
-            this.drawString(this.fontRendererObj, "Eye Color", (this.width / 2) + 104, 55, 16777215);
-
-            this.drawString(this.fontRendererObj, "Wing Color", (this.width / 2) + 102, this.height / 2, 16777215);
+            this.drawString(
+                this.fontRendererObj,
+                I18n.format("gui.perks.eye_color"),
+                (this.width / 2) + 104,
+                55,
+                16777215);
 
             this.drawString(
                 this.fontRendererObj,
-                "Wing Marking Color",
+                I18n.format("gui.perks.wing_color"),
+                (this.width / 2) + 102,
+                this.height / 2,
+                16777215);
+
+            this.drawString(
+                this.fontRendererObj,
+                I18n.format("gui.perks.wing_marking_color"),
                 (this.width / 2) + 82,
                 this.height - 55,
                 16777215);
