@@ -91,7 +91,7 @@ public class AetherEventHandler {
                 if (!event.entityPlayer.worldObj.isRemote) {
                     Class<?> oclass = EntitiesAether.getClassFromID(itemstack.getItemDamage());
 
-                    if (oclass != null && oclass.isAssignableFrom(this.getClass())) {
+                    if (oclass != null && oclass.isInstance(event.target)) {
                         EntityAgeable entityageable = ((EntityAgeable) event.target)
                             .createChild((EntityAgeable) event.target);
 

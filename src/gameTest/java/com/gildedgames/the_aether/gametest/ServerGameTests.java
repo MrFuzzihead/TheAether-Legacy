@@ -1,6 +1,11 @@
 package com.gildedgames.the_aether.gametest;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 import net.minecraft.block.Block;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -14,9 +19,13 @@ import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.api.AetherAPI;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.entities.EntitiesAether;
+import com.gildedgames.the_aether.entities.effects.EffectInebriation;
+import com.gildedgames.the_aether.entities.effects.PotionInebriation;
 import com.gildedgames.the_aether.items.ItemsAether;
+import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
 import com.gildedgames.the_aether.registry.AetherLore;
 import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
+import com.google.common.collect.Multimap;
 
 /**
  * In-game assertions for The Aether Legacy.
@@ -48,6 +57,9 @@ public final class ServerGameTests {
         checkDimensionRegistration();
         checkEntityRegistry();
         checkAetherAPIRegistries();
+        checkToolAttackDamage();
+        checkRemedyBucket();
+        checkLeafDrops();
         checkLoreLookup();
         checkRecipes();
         checkBlockPlacement();
@@ -164,6 +176,59 @@ public final class ServerGameTests {
                     AetherAPI.instance()
                         .getMoaType(0))
                 == 0);
+    }
+
+    private static void checkToolAttackDamage() {
+        ItemStack pickaxe = new ItemStack(ItemsAether.skyroot_pickaxe);
+        Multimap<String, AttributeModifier> modifiers = pickaxe.getAttributeModifiers();
+        Collection<AttributeModifier> attackModifiers = modifiers
+            .get(SharedMonsterAttributes.attackDamage.getAttributeUnlocalizedName());
+
+        double attackDamage = 0.0D;
+        for (AttributeModifier modifier : attackModifiers) {
+            attackDamage += modifier.getAmount();
+        }
+
+        check("Aether tools contribute positive attack damage", attackDamage > 0.0D);
+    }
+
+    private static void checkRemedyBucket() {
+        EffectInebriation effect = new EffectInebriation(PotionInebriation.inebriation.id, 500, 0);
+
+        check(
+            "remedy bucket is registered as a cure",
+            effect.isCurativeItem(new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Remedy.meta)));
+        check(
+            "empty bucket is not a cure",
+            !effect.isCurativeItem(new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Empty.meta)));
+        check(
+            "skyroot bucket keeps its container item",
+            ItemsAether.skyroot_bucket.getContainerItem() == ItemsAether.skyroot_bucket);
+    }
+
+    private static void checkLeafDrops() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for leaf drops", false);
+            return;
+        }
+
+        Block[] leaves = { BlocksAether.skyroot_leaves, BlocksAether.golden_oak_leaves, BlocksAether.crystal_leaves,
+            BlocksAether.crystal_fruit_leaves, BlocksAether.holiday_leaves, BlocksAether.decorated_holiday_leaves };
+
+        for (Block leaf : leaves) {
+            ArrayList<ItemStack> drops = leaf.getDrops(world, 0, 100, 0, 0, 0);
+            boolean invalid = false;
+
+            for (ItemStack drop : drops) {
+                if (drop == null || drop.getItem() == null) {
+                    invalid = true;
+                }
+            }
+
+            check("leaf drops never contain a null item: " + leaf, !invalid);
+        }
     }
 
     private static void checkLoreLookup() {

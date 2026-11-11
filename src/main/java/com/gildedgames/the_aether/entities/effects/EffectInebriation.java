@@ -20,7 +20,7 @@ public class EffectInebriation extends PotionEffect {
     public EffectInebriation(int potionID, int duration, int amplifier, boolean isAmbient) {
         super(potionID, duration, amplifier, isAmbient);
         this.curativeItems = new ArrayList<>();
-        this.curativeItems.add(new ItemStack(ItemsAether.skyroot_bucket, EnumSkyrootBucketType.Remedy.meta));
+        this.curativeItems.add(new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Remedy.meta));
         this.curativeItems.add(new ItemStack(ItemsAether.white_apple));
     }
 

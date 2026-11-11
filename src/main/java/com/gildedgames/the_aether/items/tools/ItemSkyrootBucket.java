@@ -328,7 +328,7 @@ public class ItemSkyrootBucket extends Item {
             player.setCured(200);
             if (!world.isRemote) {
                 entityplayer
-                    .curePotionEffects(new ItemStack(ItemsAether.skyroot_bucket, EnumSkyrootBucketType.Remedy.meta));
+                    .curePotionEffects(new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Remedy.meta));
             }
         } else if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Milk) {
             if (!world.isRemote) {

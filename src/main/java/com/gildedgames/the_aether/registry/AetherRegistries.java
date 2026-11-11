@@ -162,7 +162,7 @@ public class AetherRegistries {
             .register(
                 new AetherEnchantment(
                     new ItemStack(ItemsAether.skyroot_bucket, 1, 2),
-                    new ItemStack(ItemsAether.skyroot_bucket.setContainerItem(null), 1, 3),
+                    new ItemStack(ItemsAether.skyroot_bucket, 1, 3),
                     1000));
 
         AetherAPI.instance()

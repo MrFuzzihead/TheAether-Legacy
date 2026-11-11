@@ -1,11 +1,13 @@
 package com.gildedgames.the_aether.entities.bosses;
 
+import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.EntityAIAttackOnCollide;
 import net.minecraft.entity.ai.EntityAIWander;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
@@ -134,14 +136,19 @@ public class EntityValkyrie extends EntityAetherMob {
         boolean flag = false;
 
         for (int q = 0; q < 32 && !flag; q++) {
-            this.rand.nextInt(rad / 2);
-            this.rand.nextInt(rad / 2);
+            int i = newX + (this.rand.nextInt(rad / 2) - this.rand.nextInt(rad / 2));
             int j = newY + (this.rand.nextInt(rad / 2) - this.rand.nextInt(rad / 2));
-            this.rand.nextInt(rad / 2);
-            this.rand.nextInt(rad / 2);
+            int k = newZ + (this.rand.nextInt(rad / 2) - this.rand.nextInt(rad / 2));
 
-            if (j > 124 || j < 5) {
+            if (j < 5 || j > 124) {
                 continue;
+            }
+
+            if (this.isAirySpace(i, j, k) && this.isAirySpace(i, j + 1, k) && !this.isAirySpace(i, j - 1, k)) {
+                newX = i;
+                newY = j;
+                newZ = k;
+                flag = true;
             }
         }
 
@@ -157,6 +164,12 @@ public class EntityValkyrie extends EntityAetherMob {
             spawnExplosionParticle();
             this.teleTimer = this.rand.nextInt(40);
         }
+    }
+
+    private boolean isAirySpace(int x, int y, int z) {
+        Block block = this.worldObj.getBlock(x, y, z);
+
+        return block == Blocks.air || block.getCollisionBoundingBoxFromPool(this.worldObj, x, y, z) == null;
     }
 
     public void teleFail() {

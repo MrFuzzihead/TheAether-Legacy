@@ -1257,7 +1257,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 84/84 checks passed
+[AETHER-GAMETEST] 94/94 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1265,3 +1265,20 @@ BUILD SUCCESSFUL
 The game-test run currently uses the plain Java 8 `runServer` task. If a future
 dependency requires lwjgl3ify, switch the `gameTestServer` dependency to
 `runServer25` and keep the same classpath/system-property injection.
+
+
+### First batch fix status
+
+The first batch of findings has been applied:
+
+- B01 — custom HUD no longer returns on `event.isCancelable()`.
+- B02 — spawn-egg breeding compares the target entity class, not the event handler.
+- B03 — removed the duplicate tool attack-damage modifier; tools use `ItemTool`'s real damage.
+- B04 — remedy bucket cure stack now uses `(item, 1, metadata)`.
+- B05 — invalid null-item stacks are removed from leaf drops.
+- B06 — enchanter registration no longer mutates the global skyroot bucket container item.
+- B07 — Valkyrie teleport now selects and assigns a safe destination.
+- B08 — Slider no longer re-focuses itself after death.
+
+Regression checks for B03, B04, B05 and B06 were added to the game-test mod.
+The in-game baseline is now **94/94 checks passed**.

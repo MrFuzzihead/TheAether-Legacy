@@ -704,8 +704,10 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
 
         this.hurtAngle = 0.7F - (this.getHealth() / 875F);
 
-        PlayerAether.get(player)
-            .setFocusedBoss(this);
+        if (this.getHealth() > 0.0F && !this.isDead) {
+            PlayerAether.get(player)
+                .setFocusedBoss(this);
+        }
 
         return flag;
     }
