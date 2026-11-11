@@ -81,10 +81,10 @@ public class BlockAetherOre extends Block {
     }
 
     @Override
-    public int getExpDrop(IBlockAccess p_149690_1_, int p_149690_5_, int p_149690_7_) {
-        Random random = new Random();
+    public int getExpDrop(IBlockAccess access, int meta, int fortune) {
+        Random random = access instanceof World ? ((World) access).rand : new Random();
 
-        if (this.getItemDropped(p_149690_5_, random, p_149690_7_) != Item.getItemFromBlock(this)) {
+        if (this.getItemDropped(meta, random, fortune) != Item.getItemFromBlock(this)) {
             int amount = 0;
 
             if (this == BlocksAether.ambrosium_ore) {

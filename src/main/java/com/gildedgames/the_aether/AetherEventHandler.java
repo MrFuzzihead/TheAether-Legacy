@@ -324,7 +324,7 @@ public class AetherEventHandler {
                             .equals("1d680bb6-2a9a-4f25-bf2f-a1af74361d69"))) {
                         if (event.target.worldObj.isRemote) {
                             for (int j = 0; j < 20; j++) {
-                                Random itemRand = new Random();
+                                Random itemRand = event.target.worldObj.rand;
                                 double d = itemRand.nextGaussian() * 0.02D;
                                 double d1 = itemRand.nextGaussian() * 0.02D;
                                 double d2 = itemRand.nextGaussian() * 0.02D;

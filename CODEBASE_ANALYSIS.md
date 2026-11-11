@@ -1448,3 +1448,34 @@ persistence, Aechor Plant knockback immunity, and Cockatrice health. The baselin
 is now **125/125 in-game checks** and **42 unit tests**.
 
 B29 remains deferred pending a worldgen design decision.
+
+### Eighth batch fix status
+
+More medium/low cleanup:
+
+- `ItemSkyrootBucket.onBucketUsed` is now server-authoritative: the client no
+  longer consumes the stack or applies potion/cure effects, preventing
+  client/server drift.
+- `BlockAetherOre` uses the world RNG for experience drops when the block access
+  is a `World`, instead of allocating a fresh `Random`.
+- The pig-slayer particle path uses the target world's RNG instead of creating a
+  new `Random` inside the particle loop.
+- `FilledList` is explicitly fixed-size; the broken `add(int, E)` override that
+  ignored its index was removed.
+- Removed unused `Random` fields from `EntityAetherAnimal`, `ItemAetherTool` and
+  `AetherDungeon`.
+- Removed unreachable duplicate `isOnGround()` checks from `EntityFlyingCow` and
+  `EntityPhyg`; the grounded jump-count reset already happens in `onUpdate`.
+
+Added unit coverage for skyroot bucket client/server consumption and the
+fixed-size `FilledList` contract. The baseline is now **125/125 in-game checks**
+and **45 unit tests**.
+
+Remaining medium/low items intentionally deferred:
+
+- `AetherGenFloatingIsland` tautological `z != 0 || z != 1` conditions, because
+  changing them alters worldgen output and needs an intended-shape decision.
+- `GuiValkyrieDialogue`/`PacketInitiateValkyrieFight` accepting medals across
+  multiple inventory stacks, because that changes the entry-fee protocol and
+  needs a gameplay decision.
+- B29 remains deferred as previously noted.

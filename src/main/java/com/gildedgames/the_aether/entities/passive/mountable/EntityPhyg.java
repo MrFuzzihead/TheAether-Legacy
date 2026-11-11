@@ -152,12 +152,6 @@ public class EntityPhyg extends EntitySaddleMount {
         if (this.motionY < 0.0D && !this.isRiderSneaking()) {
             this.motionY *= 0.6D;
         }
-
-        if (!this.isOnGround() && !this.isJumping) {
-            if (this.isOnGround() && !this.worldObj.isRemote) {
-                this.jumpsRemaining = this.maxJumps;
-            }
-        }
     }
 
     @Override

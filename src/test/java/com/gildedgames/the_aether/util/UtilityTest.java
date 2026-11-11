@@ -30,6 +30,13 @@ public class UtilityTest {
         assertSame("empty", list.get(1));
     }
 
+    @Test(expected = UnsupportedOperationException.class)
+    public void filledListIsFixedSize() {
+        FilledList<String> list = new FilledList<String>(2, "empty");
+
+        list.add(0, "value");
+    }
+
     @Test
     public void randomTrackerNeverRepeatsThePreviousRoll() {
         RandomTracker tracker = new RandomTracker();

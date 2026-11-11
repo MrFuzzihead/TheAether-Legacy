@@ -9,8 +9,6 @@ import net.minecraft.world.gen.feature.WorldGenerator;
 
 public abstract class AetherDungeon extends WorldGenerator {
 
-    protected final Random random = new Random();
-
     public int chance;
 
     public Block airState = Blocks.air, blockState, extraBlockState;

@@ -1,6 +1,5 @@
 package com.gildedgames.the_aether.items.tools;
 
-import java.util.Random;
 import java.util.Set;
 
 import net.minecraft.block.Block;
@@ -13,8 +12,6 @@ import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
 public abstract class ItemAetherTool extends ItemTool {
 
     private String toolClass;
-
-    public Random random = new Random();
 
     public EnumAetherToolType toolType;
 
