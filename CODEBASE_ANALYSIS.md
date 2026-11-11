@@ -1270,7 +1270,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 121/121 checks passed
+[AETHER-GAMETEST] 125/125 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1411,3 +1411,40 @@ normal-drop species, and generated mod version. The baseline is now
 Added unit coverage for the dungeon fill helpers and perk permissions, plus
 game-test coverage for Sun Spirit defeat-state persistence. The baseline is now
 **121/121 in-game checks** and **31 unit tests**.
+
+### Seventh batch fix status
+
+Medium/low robustness batch:
+
+- `BlockTreasureChest` now uses `instanceof` checks and safe fallbacks when the
+  tile entity is missing or replaced; missing tile entities no longer crash
+  hardness, explosion-resistance, or activation checks.
+- `EntitySlider.checkIsAir` is static and safe for single-block regions; it no
+  longer reads index 1 of a one-element list, and it uses `World.isAirBlock`
+  instead of relying on the block registry being bootstrapped.
+- `EntityValkyrie` reads its persisted safe position with `getDouble`, preserving
+  fractional coordinates instead of truncating them to integers.
+- `EntityAechorPlant` is explicitly immune to knockback for its entire lifetime,
+  matching its rooted, immovable behavior.
+- `EntityCockatrice` sets its max-health attribute to 10 instead of leaving the
+  default 20 while starting at 10 health.
+- `ItemVampireBlade` only heals player attackers and no longer casts a
+  command/mod-spawned non-player attacker to `EntityPlayer`.
+- `ItemCandyCaneSword` and `ItemHolystoneSword` use the struck entity's world RNG
+  and guard the durability call when the attacker is null.
+- `BlockIcestone` only converts water/lava on the server; clients receive the
+  resulting block updates.
+- `PacketAccessory` copies its payload out of the pooled Netty buffer during
+  `fromBytes`, avoiding use-after-release. `AetherPacket` also null-checks the
+  client player and server handler.
+- `AetherBiomeDecorator` logs re-entry instead of printing to stdout and resets
+  its world/random state in a `finally` block, so one failed decoration cannot
+  disable decoration for every later chunk.
+
+Added unit coverage for treasure chests, slider air checks, icestone side
+handling, biome-decorator cleanup, Vampire Blade attackers, and accessory packet
+decoding; added game-test checks for icestone conversion, Valkyrie safe-position
+persistence, Aechor Plant knockback immunity, and Cockatrice health. The baseline
+is now **125/125 in-game checks** and **42 unit tests**.
+
+B29 remains deferred pending a worldgen design decision.

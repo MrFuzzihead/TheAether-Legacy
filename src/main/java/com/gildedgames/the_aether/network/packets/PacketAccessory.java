@@ -8,12 +8,13 @@ import com.gildedgames.the_aether.inventory.InventoryAccessories;
 import com.gildedgames.the_aether.player.PlayerAether;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 public class PacketAccessory extends AetherPacket<PacketAccessory> {
 
     private IAccessoryInventory accessories;
 
-    private ByteBuf readBuf;
+    private byte[] accessoryData;
 
     private int entityID;
 
@@ -30,7 +31,11 @@ public class PacketAccessory extends AetherPacket<PacketAccessory> {
     @Override
     public void fromBytes(ByteBuf buf) {
         this.entityID = buf.readInt();
-        this.readBuf = buf;
+
+        // FML may release the Netty buffer after fromBytes returns. Keep our
+        // own copy instead of retaining a reference to the pooled buffer.
+        this.accessoryData = new byte[buf.readableBytes()];
+        buf.readBytes(this.accessoryData);
     }
 
     @Override
@@ -47,7 +52,7 @@ public class PacketAccessory extends AetherPacket<PacketAccessory> {
             if (parent != null) {
                 InventoryAccessories newInventory = new InventoryAccessories(PlayerAether.get(parent));
 
-                newInventory.readData(message.readBuf);
+                newInventory.readData(Unpooled.wrappedBuffer(message.accessoryData));
 
                 PlayerAether.get(parent)
                     .setAccessoryInventory(newInventory);

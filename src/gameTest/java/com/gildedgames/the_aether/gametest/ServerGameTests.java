@@ -6,6 +6,7 @@ import java.util.Collection;
 import net.minecraft.block.Block;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -22,9 +23,12 @@ import com.gildedgames.the_aether.AetherEventHandler;
 import com.gildedgames.the_aether.api.AetherAPI;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.entities.EntitiesAether;
+import com.gildedgames.the_aether.entities.bosses.EntityValkyrie;
 import com.gildedgames.the_aether.entities.bosses.sun_spirit.EntitySunSpirit;
 import com.gildedgames.the_aether.entities.effects.EffectInebriation;
 import com.gildedgames.the_aether.entities.effects.PotionInebriation;
+import com.gildedgames.the_aether.entities.hostile.EntityAechorPlant;
+import com.gildedgames.the_aether.entities.hostile.EntityCockatrice;
 import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
 import com.gildedgames.the_aether.entities.passive.mountable.EntitySwet;
 import com.gildedgames.the_aether.entities.projectile.crystals.EntityCrystal;
@@ -83,6 +87,7 @@ public final class ServerGameTests {
         checkLoreLookup();
         checkRecipes();
         checkBlockPlacement();
+        checkIcestoneConversion();
         checkAetherTimeTick();
         checkSpawnDataSafety();
         checkCrystalSafety();
@@ -93,6 +98,7 @@ public final class ServerGameTests {
         checkMoaTypeOrder();
         checkLogDrops();
         checkSunSpiritDefeatState();
+        checkCombatEntitySafety();
         checkGeneratedVersion();
 
         return failures;
@@ -408,6 +414,45 @@ public final class ServerGameTests {
         check("Sun Spirit defeat state persists", loaded.hasDefeated);
     }
 
+    private static void checkCombatEntitySafety() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for combat entity checks", false);
+            return;
+        }
+
+        EntityValkyrie valkyrie = new EntityValkyrie(world);
+        valkyrie.safeX = 12.75D;
+        valkyrie.safeY = 64.5D;
+        valkyrie.safeZ = -3.25D;
+
+        NBTTagCompound valkyrieTag = new NBTTagCompound();
+        valkyrie.writeEntityToNBT(valkyrieTag);
+
+        EntityValkyrie loadedValkyrie = new EntityValkyrie(world);
+        loadedValkyrie.readEntityFromNBT(valkyrieTag);
+
+        check(
+            "Valkyrie safe position keeps its fractional coordinates",
+            loadedValkyrie.safeX == 12.75D && loadedValkyrie.safeY == 64.5D && loadedValkyrie.safeZ == -3.25D);
+
+        EntityAechorPlant plant = new EntityAechorPlant(world);
+        plant.setHealth(-1.0F);
+        plant.motionX = plant.motionY = plant.motionZ = 0.0D;
+        plant.knockBack(null, 1.0F, 1.0D, 1.0D);
+
+        check(
+            "Aechor Plants are never knocked back",
+            plant.motionX == 0.0D && plant.motionY == 0.0D && plant.motionZ == 0.0D);
+
+        EntityCockatrice cockatrice = new EntityCockatrice(world);
+
+        check(
+            "Cockatrice starts at its full 10 health",
+            cockatrice.getMaxHealth() == 10.0F && cockatrice.getHealth() == 10.0F);
+    }
+
     private static void checkGeneratedVersion() {
         try {
             String declared = Aether.class.getAnnotation(Mod.class)
@@ -476,6 +521,28 @@ public final class ServerGameTests {
     private static void checkZaniteSwordAttributeMap() {
         ItemZaniteSword sword = (ItemZaniteSword) ItemsAether.zanite_sword;
         check("zanite sword has a non-null attribute modifier map", sword.getItemAttributeModifiers() != null);
+    }
+
+    private static void checkIcestoneConversion() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for icestone checks", false);
+            return;
+        }
+
+        int x = 2;
+        int y = 200;
+        int z = 2;
+        Block oldBlock = world.getBlock(x, y, z);
+        int oldMeta = world.getBlockMetadata(x, y, z);
+
+        world.setBlock(x, y, z, Blocks.water);
+        BlocksAether.icestone.onBlockAdded(world, x, y, z);
+
+        check("icestone freezes nearby water", world.getBlock(x, y, z) == Blocks.ice);
+
+        world.setBlock(x, y, z, oldBlock, oldMeta, 3);
     }
 
     private static void checkAetherTimeTick() {

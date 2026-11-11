@@ -319,9 +319,9 @@ public class EntityValkyrie extends EntityAetherMob {
         this.angerLevel = compound.getInteger("angerLevel");
         this.teleTimer = compound.getInteger("teleTimer");
         this.timeLeft = compound.getInteger("timeLeft");
-        this.safeX = compound.getInteger("safePosX");
-        this.safeY = compound.getInteger("safePosY");
-        this.safeZ = compound.getInteger("safePosZ");
+        this.safeX = compound.getDouble("safePosX");
+        this.safeY = compound.getDouble("safePosY");
+        this.safeZ = compound.getDouble("safePosZ");
     }
 
     public boolean attackEntityFrom(DamageSource ds, float i) {

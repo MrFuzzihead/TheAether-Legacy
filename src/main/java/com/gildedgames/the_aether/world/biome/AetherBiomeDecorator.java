@@ -12,6 +12,9 @@ import net.minecraft.world.gen.feature.WorldGenDoublePlant;
 import net.minecraft.world.gen.feature.WorldGenLakes;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenClouds;
@@ -27,6 +30,8 @@ import com.gildedgames.the_aether.world.biome.decoration.AetherGenQuicksoil;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenSkyrootTree;
 
 public class AetherBiomeDecorator extends BiomeDecorator {
+
+    private static final Logger logger = LogManager.getLogger();
 
     public World world;
 
@@ -63,14 +68,20 @@ public class AetherBiomeDecorator extends BiomeDecorator {
     @Override
     public void decorateChunk(World worldIn, Random random, BiomeGenBase biome, int x, int z) {
         if (this.world != null) {
-            System.out.println("Already decorating");
-        } else {
+            logger.warn("Already decorating an Aether chunk; skipping this pass");
+            return;
+        }
+
+        try {
             this.world = worldIn;
             this.rand = random;
             this.chunk_X = x;
             this.chunk_Z = z;
             this.aetherBiome = biome;
             this.genDecorations(biome);
+        } finally {
+            // An exception during decoration must not leave this decorator
+            // permanently marked as busy for every later chunk.
             this.world = null;
             this.rand = null;
         }

@@ -29,23 +29,26 @@ public class BlockTreasureChest extends BlockChest {
     }
 
     @Override
-    public float getBlockHardness(World p_149712_1_, int p_149712_2_, int p_149712_3_, int p_149712_4_) {
-        TileEntityTreasureChest treasurechest = (TileEntityTreasureChest) p_149712_1_
-            .getTileEntity(p_149712_2_, p_149712_3_, p_149712_4_);
+    public float getBlockHardness(World worldIn, int x, int y, int z) {
+        TileEntity tile = worldIn.getTileEntity(x, y, z);
 
-        if (treasurechest != null) {
-            return treasurechest.isLocked() ? this.blockHardness : 5.0F;
+        if (tile instanceof TileEntityTreasureChest) {
+            return ((TileEntityTreasureChest) tile).isLocked() ? this.blockHardness : 5.0F;
         } else {
             return this.blockHardness;
         }
     }
 
     @Override
-    public float getExplosionResistance(Entity par1Entity, World world, int x, int y, int z, double explosionX,
+    public float getExplosionResistance(Entity entity, World world, int x, int y, int z, double explosionX,
         double explosionY, double explosionZ) {
-        TileEntityTreasureChest treasurechest = (TileEntityTreasureChest) world.getTileEntity(x, y, z);
+        TileEntity tile = world.getTileEntity(x, y, z);
 
-        return treasurechest.isLocked() ? this.blockResistance : 10.0F;
+        if (!(tile instanceof TileEntityTreasureChest)) {
+            return this.blockResistance;
+        }
+
+        return ((TileEntityTreasureChest) tile).isLocked() ? this.blockResistance : 10.0F;
     }
 
     @Override
@@ -66,12 +69,17 @@ public class BlockTreasureChest extends BlockChest {
             return true;
         }
 
-        TileEntityTreasureChest treasurechest = (TileEntityTreasureChest) worldIn.getTileEntity(x, y, z);
+        TileEntity tile = worldIn.getTileEntity(x, y, z);
 
+        if (!(tile instanceof TileEntityTreasureChest)) {
+            return false;
+        }
+
+        TileEntityTreasureChest treasurechest = (TileEntityTreasureChest) tile;
         ItemStack guiID = playerIn.getCurrentEquippedItem();
 
         if (treasurechest.isLocked()) {
-            if (guiID == null || guiID != null && guiID.getItem() != ItemsAether.dungeon_key) {
+            if (guiID == null || guiID.getItem() != ItemsAether.dungeon_key) {
                 return false;
             }
 
