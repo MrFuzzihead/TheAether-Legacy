@@ -1,0 +1,1267 @@
+# The Aether Legacy — Codebase Analysis
+
+Analysis of `TheAether-Legacy` (Minecraft 1.7.10 / Forge 10.13.4.1614) at commit
+`6fde73bd` with local dependency updates applied. The project is a large port
+(390 Java files, ~34k lines of mod code). This document records bugs,
+performance problems, refactoring opportunities, dead code, feature gaps, and
+the dependency/reflection/ASM audit.
+
+Build verification performed during the analysis:
+
+```text
+./gradlew clean build --no-configuration-cache
+BUILD SUCCESSFUL
+```
+
+Before the test infrastructure was added, `test` was `NO-SOURCE`; the runtime
+findings below are static-analysis findings unless a test now covers them. See
+section 10 for the current unit-test and in-game test baseline.
+
+---
+
+## 1. Dependency audit (`dependencies.gradle`)
+
+`dependencies.gradle` originally pinned:
+
+```gradle
+runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.8.135-GTNH:dev")
+devOnlyNonPublishable("com.github.GTNewHorizons:Battlegear2-for-Backhand:1.6.8-backhand:dev")
+```
+
+I checked the GTNH Maven metadata and the upstream GitHub releases. Both pinned
+versions were behind. I updated the file to:
+
+```gradle
+runtimeOnlyNonPublishable("com.github.GTNewHorizons:NotEnoughItems:2.9.4-GTNH:dev")
+devOnlyNonPublishable("com.github.GTNewHorizons:Battlegear2-for-Backhand:1.7.0-backhand:dev")
+```
+
+| Dependency | Old | New | Latest release checked | Correctness |
+|---|---|---|---|---|
+| `NotEnoughItems` | `2.8.135-GTNH` | **`2.9.4-GTNH`** | `2.9.4-GTNH` | Latest `GTNH` release; `:dev` classifier exists. |
+| `Battlegear2-for-Backhand` | `1.6.8-backhand` | **`1.7.0-backhand`** | `1.7.0-backhand` | Latest `-backhand` release; `:dev` classifier exists. |
+
+Notes:
+
+- `runtimeOnlyNonPublishable` is correct for NEI: the project does not import
+  NEI classes, so this is only present in the development runtime and is not
+  published as a dependency. This is the correct optional-tool behavior.
+- `devOnlyNonPublishable` is correct for Battlegear: the project directly
+  imports `mods.battlegear2.*` in a few optional client compatibility classes,
+  so it needs compile-time access and a development runtime, but must not be
+  published as a hard dependency.
+- The new Battlegear release pulls `Backhand:1.8.8` and `GTNHLib:0.11.48`
+  transitively. The full build resolved and compiled successfully against it,
+  and the APIs used by this project (`BattlegearUtils.RENDER_BUS`,
+  `BattlegearRenderHelper.renderItemInFirstPerson`,
+  `RenderPlayerEventChild.PostRenderPlayerElement`) are still present in
+  `1.7.0-backhand`.
+- NEI has no compile-time use here. If NEI integration is added later, use
+  `compileOnly` (or `devOnlyNonPublishable`) plus a `Loader.isModLoaded("NotEnoughItems")`
+  guard rather than a hard dependency.
+- The `dependencies.gradle` header comment still references Gradle 8.0.1. It is
+  only documentation; the wrapper is currently 9.7.1 and the settings
+  convention plugin is 2.0.34 (both newer than the versions the comments
+  mention).
+- If repeatable builds are important, consider a single dependency-version
+  block/constraint for GTNHLib, since Battlegear and NEI both pull GTNHLib and
+  Gradle currently resolves the highest requested version (0.11.48 in this
+  build).
+
+### Optional integration risk
+
+`AetherItemRenderer` contains a direct call to
+`mods.battlegear2.client.utils.BattlegearRenderHelper.renderItemInFirstPerson`
+inside `if (Loader.isModLoaded("battlegear2"))`. The class is only resolved when
+that bytecode executes on HotSpot, but direct references in a common client
+class are still fragile. Prefer keeping every Battlegear reference in a
+separate class that is loaded only when the mod is present (the project already
+does this for `BattlegearClientEventHandler`).
+
+---
+
+## 2. Reflection, access transformers, ASM, and mixins
+
+### Summary
+
+| Category | Result |
+|---|---|
+| Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
+| Mixins | **None.** `usesMixins = false`, no mixin JSON, no `mixinsPackage`, no `@Shadow`/`@Inject`/`@Redirect` classes. |
+| ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
+| Reflection | **Present:** ~15 reflective operations across 6 files. No `setAccessible(...)` calls. |
+
+The classpath does contain `org.ow2.asm:asm-debug-all:5.0.3` transitively from
+Minecraft/FML. That is a library dependency required by Forge/launchwrapper, not
+project ASM code. If the requirement is “no custom ASM transformers”, the project
+already satisfies it.
+
+### Reflection inventory
+
+| File | Calls | What is accessed | Recommendation |
+|---|---:|---|---|
+| `AetherEventHandler.java:404-415` | 1 | `Entity.invulnerable` via `ObfuscationReflectionHelper.setPrivateValue(..., "invulnerable", "field_83001_bt")` for dungeon-key `EntityItem`s. | **Remove.** `EntityAetherItem` already exists and overrides `isEntityInvulnerable()` to `true`. On `EntityJoinWorldEvent`, replace a normal dungeon-key `EntityItem` with `EntityAetherItem` (copy stack/position/motion/pickup delay, cancel the original join), or spawn keys through a custom entity factory. |
+| `PlayerAether.java:262-263` | 2 per player per tick | `EntityLivingBase.isJumping` via `ReflectionHelper.getPrivateValue(..., "isJumping", "field_70703_bu")`. | This is a **hot path** and a mapping-sensitive reflection lookup. There is no public getter in 1.7.10. Options: (a) track jump on the client from `EntityPlayerSP.movementInput.jump` and send a small packet/player-data field to the server; (b) add a narrow AT or mixin; (c) cache the reflected field at least. Pure API removal is difficult without an AT/mixin/packet. |
+| `AetherClientEvents.java:313-320` | 4 per GUI open | `GuiContainer.guiLeft`, `guiTop`, `xSize`, `ySize` via `ObfuscationReflectionHelper.getPrivateValue(...)`. These are `protected` in the MCP source. | Avoid for `GuiInventory`: the vanilla dimensions are known (`176 x 166`) and the position can be computed from `event.gui.width/height`. For other `GuiContainer`s, use the public screen dimensions or a small layout hook. Because the fields are `protected`, an unrelated event handler cannot read them directly. |
+| `AetherClientEvents.java:390-398` | 3 on creative-tab changes | `GuiScreen.buttonList` via indexed reflection, plus `guiLeft/guiTop` again. | Use `GuiScreenEvent.InitGuiEvent.Post#buttonList` where possible. The creative-tab switch is the awkward case: the button list is `protected` and there is no public event accessor. A clean fix is a small `GuiContainerCreative` integration/subclass or a dedicated button manager; otherwise one narrow AT for `buttonList` may be preferable to indexed reflection. |
+| `AetherEntityRenderer.java:34` | 1 at client startup | `EntityRenderer.itemRenderer` (`field_78516_c` / index 7). | The field is `public final` in the MCP source; reflection is only needed to assign the final field. Prefer a custom first-person item renderer via `RenderHandEvent`/`IItemRenderer` or per-item rendering. If that cannot reproduce the behavior, a single narrow AT to remove `final` is less fragile than indexed reflection, though it violates the “avoid AT” preference. |
+| `EntitiesAether.java:138-150` | 2 per spawn-egg spawn | `Class.getConstructor(World.class).newInstance(world)`. | Replace with an explicit `Map<Integer, Function<World, Entity>>` factory (or a `switch` on the ID). This also avoids the repeated exception path and makes entity registration easier to validate. |
+| `AetherMainMenu.java:274-278` | 3 when opening the “old OpenGL” help link | `Class.forName("java.awt.Desktop")`, `getMethod`, `invoke`. | Not obfuscation-related and unnecessary: this is client-only code. Use `java.awt.Desktop` directly behind `GraphicsEnvironment.isHeadless()`/`Desktop.isDesktopSupported()` checks, or use a safer GUI link helper. |
+
+### Reflection-free replacement sketch for dungeon keys
+
+```java
+@SubscribeEvent
+public void onEntityJoinWorld(EntityJoinWorldEvent event) {
+    if (event.world.isRemote || !(event.entity instanceof EntityItem)) return;
+
+    EntityItem item = (EntityItem) event.entity;
+    if (item.getEntityItem().getItem() != ItemsAether.dungeon_key
+        || item instanceof EntityAetherItem) return;
+
+    EntityAetherItem replacement = new EntityAetherItem(
+        event.world, item.posX, item.posY, item.posZ, item.getEntityItem().copy());
+    replacement.motionX = item.motionX;
+    replacement.motionY = item.motionY;
+    replacement.motionZ = item.motionZ;
+    replacement.delayBeforeCanPickup = item.delayBeforeCanPickup;
+    event.setCanceled(true);
+    event.world.spawnEntityInWorld(replacement);
+}
+```
+
+`EntityAetherItem` is already registered in `EntitiesAether`, so no new entity
+registration is required. Verify pickup delay and ownership behavior in-game.
+
+### Other `Class`-related issue (not reflection)
+
+`AetherEventHandler.java:94` uses
+`oclass.isAssignableFrom(this.getClass())` when validating a spawn egg. That
+compares the egg’s entity class against `AetherEventHandler.class`, not the
+interacted entity, so the condition is always false. This is a separate bug
+(see B02).
+
+---
+
+## 3. Bugs
+
+Severity is based on impact and likelihood. Line numbers are from the analyzed
+commit.
+
+### Critical
+
+#### B01 — Custom HUD never renders
+
+**File:** `client/gui/GuiAetherInGame.java:38-40`
+
+```java
+if (event.isCancelable() || event.type != ElementType.TEXT) {
+    return;
+}
+```
+
+`RenderGameOverlayEvent` is annotated `@Cancelable`, so `isCancelable()` is
+`true` for `RenderGameOverlayEvent.Text` as well. This handler therefore returns
+before rendering anything. The Aether HUD (poison/cure vignettes, iron-bubble
+counter, hammer cooldown, Moa jumps, boss bar, portal overlay) is effectively
+dead.
+
+**Fix:** remove the `isCancelable()` test:
+
+```java
+if (event.type != ElementType.TEXT) {
+    return;
+}
+```
+
+or handle `RenderGameOverlayEvent.Post`/`.Text` and only guard on the event type.
+
+#### B02 — Spawn eggs never produce babies
+
+**File:** `AetherEventHandler.java:92-95`
+
+```java
+Class<?> oclass = EntitiesAether.getClassFromID(itemstack.getItemDamage());
+
+if (oclass != null && oclass.isAssignableFrom(this.getClass())) {
+```
+
+`this` is the event handler, not the target entity. The check is always false,
+so `createChild` and the egg consumption path are unreachable.
+
+**Fix:** use the target class, or simply check the registry ID:
+
+```java
+if (oclass != null && oclass.isAssignableFrom(event.target.getClass())) {
+```
+
+or `oclass != null && oclass.isInstance(event.target)`.
+
+#### B03 — Aether tools lose their attack-damage modifier
+
+**File:** `items/tools/ItemAetherTool.java:18, 74-79`
+
+`private float attackDamage;` is never assigned, but
+`getItemAttributeModifiers()` adds a modifier with value `0` and the same UUID
+as the modifier added by `ItemTool` (`field_111210_e`). `AttributeMap` applies
+modifiers one by one and removes by UUID before applying; the zero-valued
+modifier can replace the real tool attack modifier. At minimum the override is
+wrong; at worst all Aether tools do no bonus attack damage.
+
+**Fix:** assign `this.attackDamage = damage;` in the constructor, or remove the
+override and let `ItemTool` own the modifier. Do not add a second modifier with
+the same UUID.
+
+#### B04 — Remedy bucket does not actually cure inebriation
+
+**Files:**
+
+- `entities/effects/EffectInebriation.java:23`
+- `items/tools/ItemSkyrootBucket.java:331`
+
+```java
+new ItemStack(ItemsAether.skyroot_bucket, EnumSkyrootBucketType.Remedy.meta)
+```
+
+The two-argument `ItemStack(Item, int)` constructor sets the **stack size**, not
+the metadata. This creates 3 empty skyroot buckets (damage `0`) rather than one
+remedy bucket (damage `3`). `PotionEffect.isCurativeItem` compares item and
+damage, so the cure check fails.
+
+**Fix:**
+
+```java
+new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Remedy.meta)
+```
+
+for both occurrences. The same mistake pattern should be checked anywhere an
+enum `meta` is passed as the second argument.
+
+#### B05 — Crystal/holiday leaves can create null-item drops
+
+**File:** `blocks/natural/BlockAetherLeaves.java:124-135`
+
+`getItemDropped` returns `null` for crystal leaves and holiday leaves, but
+`BlockLeaves.getDrops` constructs an `ItemStack` from the return value. That
+produces a stack with a null item, which can crash when the drop is processed or
+picked up.
+
+**Fix:** override `getDrops` fully (do not call `super` for null-drop leaves), or
+return a non-null item (e.g. the appropriate sapling or nothing for those
+leaves). Also guard the apple addition so it only applies when the base drop is
+valid.
+
+#### B06 — `setContainerItem(null)` mutates the skyroot bucket item globally
+
+**File:** `registry/AetherRegistries.java:164-166`
+
+```java
+new AetherEnchantment(
+    new ItemStack(ItemsAether.skyroot_bucket, 1, 2),
+    new ItemStack(ItemsAether.skyroot_bucket.setContainerItem(null), 1, 3),
+    1000)
+```
+
+`Item.setContainerItem` is a mutating setter. This disables the skyroot bucket’s
+container behavior for the entire game when the enchanter registry initializes.
+It is not limited to the output stack.
+
+**Fix:** use `new ItemStack(ItemsAether.skyroot_bucket, 1, 3)` and handle the
+container item in the enchanter/freezer logic, or create a separate item
+instance if the output truly must not have a container.
+
+#### B07 — Valkyrie teleport logic never teleports
+
+**File:** `entities/bosses/EntityValkyrie.java:117-160`
+
+The loop computes candidate coordinates but never assigns them to `newX/newY/newZ`
+and never sets `flag = true`. The method always falls through to `teleFail()`.
+The extra `rand.nextInt(...)` calls are also wasted.
+
+**Fix:** assign the candidate coordinates when the safety checks pass, e.g.:
+
+```java
+newX = newY = newZ = ...; // computed candidate
+flag = true;
+```
+
+Also reset `teleTimer` correctly and validate the destination against world
+bounds and block collisions.
+
+#### B08 — Slider boss bar is re-pointed at a dead boss
+
+**File:** `entities/bosses/slider/EntitySlider.java:631-708`
+
+The death branch calls `PlayerAether.get(player).setFocusedBoss(null)` around
+line 640, but the method unconditionally calls
+`PlayerAether.get(player).setFocusedBoss(this)` near line 708 after the damage
+handling. After a killing blow, the player’s focused boss becomes the now-dead
+Slider. The HUD usually clears it next frame, but this is wrong state and can
+leave a stale boss reference.
+
+**Fix:** only set the focused boss when `this.getHealth() > 0 && !this.isDead`,
+or return immediately after the death block.
+
+#### B09 — Time advancement is a side effect of a rendering/calculation getter
+
+**File:** `world/AetherWorldProvider.java:50-87`
+
+`calculateCelestialAngle` both **advances** `AetherData` time by 1 and writes it
+back with `markDirty()`. This method is called whenever the world needs a
+celestial angle (not strictly once per tick, and potentially by other mods).
+Every call therefore advances Aether time; the day can run at the wrong speed,
+and NBT data is dirtied continuously.
+
+**Fix:** move the increment into a world-tick handler (for example, the
+`WorldTickEvent` path already used by `AetherEventHandler`) and keep
+`calculateCelestialAngle` read-only. Also cache `AetherData` values instead of
+reading `NBTTagCompound` on every call.
+
+### High
+
+#### B10 — Zanite accessory mining bonus returns the wrong value
+
+**File:** `inventory/InventoryAccessories.java:37-64`
+
+The method starts with `float f = original`, multiplies `f` by the zanite
+bonus, then returns:
+
+```java
+return f == original ? original : f + original;
+```
+
+When any bonus applies, it returns `f + original` instead of `f`. That roughly
+doubles the intended multiplier and makes the bonus depend on the original dig
+speed.
+
+**Fix:** return `f` (or `Math.max(f, original)` if that is the intended rule).
+The same logic should be extracted into a helper and unit-tested.
+
+#### B11 — Accessory drops are not removed from the inventory
+
+**File:** `inventory/InventoryAccessories.java:167-181`
+
+`dropAccessories()` spawns item entities but never clears the slots. If it is
+called more than once, or if the same inventory object is reused, accessories
+can be duplicated. It also leaves a stale accessory inventory for any code
+that reads it after the drop.
+
+**Fix:** set each slot to `null` after dropping it, or collect a copy and clear
+the slots before spawning the entities.
+
+#### B12 — Removing the player from a portal leaves a stale half-in-portal state
+
+**File:** `player/PlayerAether.java:305-321`
+
+The bounds test checks the same minimum corner twice:
+
+```java
+getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
+&& getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
+```
+
+The second check should almost certainly use `maxX/maxY/maxZ` (or check the
+block under the player). As written, it does not reliably detect leaving a
+portal.
+
+**Fix:** use the correct corners, or simplify with `isInsideBlock(BlocksAether.aether_portal)`.
+
+#### B13 — Removing dying clouds while iterating forward skips entries
+
+**File:** `player/PlayerAether.java:230-236`
+
+```java
+for (int i = 0; i < this.clouds.size(); ++i) {
+    if (this.clouds.get(i).isDead) {
+        this.clouds.remove(i);
+    }
+}
+```
+
+Removing at index `i` shifts the next entity into `i`; the loop then increments
+`i` and skips it. Use an `Iterator` or iterate backwards.
+
+#### B14 — Swet sends a packet to every player every tick
+
+**File:** `entities/passive/mountable/EntitySwet.java:166-168`
+
+```java
+this.midJump = !this.onGround;
+AetherNetwork.sendToAll(new PacketSwetJump(this.getEntityId(), !this.onGround));
+```
+
+Every Swet on the server broadcasts every tick. This is one of the largest
+avoidable network costs in the mod: `O(swets × players × 20)` packets per second.
+The value is already derivable from `onGround` and can be synchronized through
+`dataWatcher` or only sent on state changes to nearby players.
+
+**Fix:** add a data-watcher byte (or use the existing one) for `midJump`, and
+send nothing in `onUpdate`. If a packet is necessary, send only on
+ground-state transitions with `sendToAllAround`.
+
+#### B15 — Swet despawn and loot behavior is inverted/broken
+
+**File:** `entities/passive/mountable/EntitySwet.java:391-402, 451-453`
+
+- `canDespawn()` returns `this.isFriendly()`. Friendly ridden Swets are allowed
+  to despawn; non-friendly Swets are never allowed to despawn. This is the
+  opposite of the apparent intent (`return !this.isFriendly()`).
+- `dropFewItems` calls `entityDropItem(new ItemStack(..., count), ...)` where
+  `count` can be `0` (e.g. `rand.nextInt(2)`). A zero-size item is invalid and
+  can cause odd pickup/merge behavior. Guard with `if (count > 0)` or use a
+  normal `dropItem`.
+- `capturePrey` changes the Swet’s hitbox to the player’s dimensions and never
+  restores it when the prey dismounts/dies, leaving an oversized Swet.
+
+#### B16 — Poison darts resurrect themselves
+
+**File:** `entities/projectile/darts/EntityDartPoison.java:29-41`
+
+```java
+super.onDartHit(movingobjectposition);
+...
+this.isDead = false;
+```
+
+`super.onDartHit` may call `setDead()` on a successful hit; the next line clears
+`isDead`. Poison darts can therefore survive hits and hit repeatedly. Remove the
+assignment and let the base class manage death.
+
+#### B17 — Hammer projectiles hit repeatedly and never stop on blocks
+
+**Files:**
+
+- `entities/projectile/EntityHammerProjectile.java:28-43`
+- `entities/projectile/EntityProjectileBase.java:146, 270`
+
+The base class calls `onImpact` whenever a collision is found, but
+`EntityHammerProjectile.onImpact` only damages the entity and never calls
+`setDead()` for a normal entity or block hit. It can therefore apply damage on
+multiple consecutive ticks while overlapping an entity, and it passes through
+terrain. `ticksInAir` is also incremented by both the base and the override, so
+the configured `> 100` lifetime is reached in about half the intended time.
+
+**Fix:** call `setDead()` after the first valid impact (or after the intended
+piercing behavior), remove the duplicate `ticksInAir++`, and decide explicitly
+whether the hammer should stop at blocks.
+
+#### B18 — Zephyr snowballs pass through terrain
+
+**File:** `entities/projectile/EntityZephyrSnowball.java:40-62`
+
+`onImpact` handles entity hits only. A block hit does nothing, so the projectile
+keeps moving through the block and can hit entities on the other side. Add
+`this.setDead()` (and optional impact particles/sound) for
+`MovingObjectType.BLOCK`, or set `inGround`/motion to zero.
+
+#### B19 — MiniCloud can NPE on the client and in its spawn packet
+
+**File:** `entities/passive/EntityMiniCloud.java:105-117, 170-188`
+
+On the client, `owner` is resolved from the spawn data and may be `null`. The
+client path does not guard it before `this.owner.isDead`, causing an NPE.
+`writeSpawnData` also calls `this.owner.getEntityId()` without a null check.
+
+**Fix:** guard `owner == null` before all uses; write a safe sentinel (e.g. `-1`)
+when there is no owner and handle it in `readSpawnData`. Consider using
+`EntityPlayer` lookup by UUID rather than entity ID.
+
+#### B20 — EntityCrystal can NPE on its target and loses its type on reload
+
+**File:** `entities/projectile/crystals/EntityCrystal.java`
+
+- `onUpdate` for `THUNDER` calls `faceEntity(getAttackTarget(), ...)` and
+  `moveTowardsTarget(...)` on both sides. On the client the target can be
+  `null`; `faceEntity(null)`/`moveTowardsTarget(null)` can NPE.
+- `writeSpawnData` writes `getAttackTarget().getEntityId()` for `THUNDER` without
+  a null check.
+- `type` is not written to NBT and there is no `readEntityFromNBT` override, so
+  a crystal reloaded from a chunk loses its fire/ice/cloud/thunder type.
+- `EnumCrystalType.get(int)` indexes `values()[id]` without bounds checking;
+  corrupted data or a bad packet can throw `ArrayIndexOutOfBoundsException`.
+
+**Fix:** validate target before client calls and spawn data; persist `type` in
+NBT (`writeEntityToNBT`/`readEntityFromNBT`); make the enum lookup defensive.
+
+#### B21 — Skyroot bed spawn handling writes an Aether bed location from an overworld bed
+
+**File:** `blocks/BlockSkyrootBed.java:95-106, 189-191`
+
+In `onBlockActivated` the `NOT_POSSIBLE_NOW` branch sets the player’s spawn
+chunk and `PlayerAether.bedLocation` whenever the player’s dimension is Aether
+**or 0**. In the overworld daytime case this can write an Aether bed location
+from an overworld bed. Guard that block with an explicit Aether-dimension check.
+
+The `isBedFoot` override returns `isBlockHeadOfBed(...)` despite its name. This
+matches the Forge `Block.isBedFoot` default in this environment, so it may be
+intentional compatibility behavior, but it looks inverted; if the intent is a
+true “foot” test, negate it:
+
+```java
+return !BlockSkyrootBed.isBlockHeadOfBed(world.getBlockMetadata(x, y, z));
+```
+
+#### B22 — Berry bush checks the wrong block for enchanted grass
+
+**File:** `blocks/natural/BlockBerryBush.java:46, 70`
+
+Both checks inspect the block at the berry bush’s own position:
+
+```java
+if (world.getBlock(x, y, z) == BlocksAether.enchanted_aether_grass) {
+```
+
+The berry bush is at `x/y/z`, so this can never be true. The intended check is
+the block below (`x, y - 1, z`). As written, the higher 1–4 berry drop range on
+enchanted grass is unreachable.
+
+#### B23 — Sun Spirit performs very expensive work repeatedly, including while dead
+
+**File:** `entities/bosses/sun_spirit/EntitySunSpirit.java`
+
+- `evapWater()` scans `21 × 21 × 8 = 3,528` blocks and may spawn 8 particles for
+  every water block on every call (`line 372`). It runs every active tick.
+- `unlockTreasure()` scans `40 × 9 × 40 = 14,400` blocks (`line 630`). It is
+  called from `onUpdate` when `isDead()` is true, which can run for multiple
+  death-update ticks.
+- `burnEntities()` scans a large bounding box every active tick.
+- The `isDead()` method is a custom helper that returns true when health <= 0;
+  the death branch is not guarded by a one-shot flag, so achievements, door
+  unlocks and chat messages can be processed repeatedly.
+- `chatLine` gating is inverted-looking:
+  `chatCount <= 0 || (!repeat && seen)` sends in odd/unreachable cases. In
+  particular, death/chat messages may be skipped or repeated depending on the
+  config and side.
+- `summonFire`, `evapWater` and `unlockTreasure` modify the world on both sides;
+  guard them with `!worldObj.isRemote` for authoritative changes.
+
+**Fix:** add a `hasDefeated`/`hasUnlocked` flag, run the expensive scans once
+(or on a timer), and split client particles from server-side block changes.
+
+#### B24 — Valkyrie Queen logic errors
+
+**File:** `entities/bosses/valkyrie_queen/EntityValkyrieQueen.java`
+
+- `updateEntityActionState` uses:
+  ```java
+  if (state != BlocksAether.locked_angelic_stone
+      || state != BlocksAether.locked_light_angelic_stone)
+  ```
+  This condition is always true because a block cannot equal both. It should
+  use `&&` if the intent is “neither of the two”.
+- `int pokey = rand.nextInt(2); if (pokey == 2)` is unreachable; `nextInt(2)`
+  returns `0` or `1`. The peaceful message branch never runs.
+- `readEntityFromNBT` calls `nbttaglist.func_150309_d(0..2)` without checking
+  the list size. Older/corrupt saves can throw `IndexOutOfBoundsException`.
+- `otherDimension()` always returns true, so the `timeLeft` countdown is dead
+  code. `getMedals` is also unused.
+
+#### B25 — Parachute collision test is effectively random
+
+**File:** `entities/passive/mountable/EntityParachute.java:108-120`
+
+`isCollided()` returns `collision_list != this.ridingPlayer.boundingBox` for
+the first collision box in the list. It compares object identity, and returns
+from the loop immediately. A terrain collision almost always makes the
+parachute die; if the player’s box happens to be first, terrain collisions are
+ignored. The result is timing/order dependent.
+
+**Fix:** iterate the collision boxes and ignore the rider’s box explicitly, or
+use a proper `checkBlockCollision`/`isAABBInMaterial` check.
+
+#### B26 — Moa type IDs depend on HashMap iteration order
+
+**File:** `api/AetherAPI.java:226-243`
+
+`getMoaTypeId` uses `getMoaTypeValues().indexOf(type)`, where
+`getMoaTypeValues()` builds an `ArrayList` from a `HashMap`. The ID is therefore
+the current hash iteration order, not registration order. It may differ across
+JVM versions, mod loading orders, or added moa types. These IDs are written to
+entity NBT and network packets. A reorder changes a saved Moa’s type.
+
+**Fix:** use a `LinkedHashMap` (registration order) or an explicit stable ID
+map. `getRandomMoaType` also creates a new `Random` per call; use a shared RNG.
+`AetherAPI.getMoaType(int)` indexes the list without bounds checking, and
+`EntityMoa.readEntityFromNBT` passes a saved integer into it; an invalid ID can
+throw `IndexOutOfBoundsException` or produce a null `AetherMoaType` that later
+NPEs in `setMoaType`/`getMaxJumps`. Validate the ID and fall back to a default.
+
+#### B27 — `MapGenSilverDungeon` reads the wrong NBT tag
+
+**File:** `world/gen/MapGenSilverDungeon.java:97`
+
+```java
+this.xTendency = tagCompound.getInteger("zTendency");
+```
+
+This should be `"xTendency"`. Saved structures lose their X cloud tendency on
+load.
+
+#### B28 — Bronze Dungeon generates rooms twice
+
+**File:** `world/dungeon/BronzeDungeon.java:340-344`
+
+```java
+if (!determineRoomPosition(...)) {
+    return false;
+}
+return determineRoomPosition(...);
+```
+
+A failed first attempt is immediately followed by a second attempt with the
+same arguments. This can generate a room/doors even when the first call failed
+and doubles the random consumption. Make it a single call.
+
+Also, `AetherDungeon`’s `addLineX/Y/Z`, planes and solid-box helpers contain:
+
+```java
+if (this.chance == 0) {
+    this.setBlockAndNotifyAdequately(...);
+    return;
+}
+```
+
+The `return` exits after placing the first block. If any caller uses
+`setBlocks(Block)` (chance 0), the structure is only one block thick instead of
+a line/plane/box. Current Bronze Dungeon code uses non-zero chances, so this is
+latent, but it is a real trap for future content.
+
+#### B29 — `AetherGenDungeonOakTree` is effectively unreachable
+
+**File:** `world/biome/decoration/AetherGenDungeonOakTree.java:41`
+
+The tree requires `aether_grass` metadata `3`. Normal Aether grass is metadata
+`0`; metadata `3` is only used on the golden-island components. The only caller
+(`AetherBiomeDecorator:129`) runs the tree 25 times per chunk at
+`world.getHeightValue`, i.e. normal surface grass, so it never generates there.
+It is also redundant with `AetherGenOakTree` (the two generators are almost
+identical).
+
+**Fix:** call it from the golden-island component with the meta-3 grass, or
+remove the 25-per-chunk attempts and use `AetherGenOakTree` on the surface.
+
+#### B30 — Freezer “icestone” bonus checks its own block
+
+**File:** `tileentity/TileEntityFreezer.java:50-55`
+
+```java
+if (this.worldObj.getBlock(this.xCoord, this.yCoord, this.zCoord)
+    == BlocksAether.icestone) {
+```
+
+The freezer’s own block is `BlocksAether.freezer`, never `icestone`, so the
+2× speed bonus can never trigger. This should probably check the block below,
+matching the enchanter’s `enchanted_gravitite` check.
+
+Also, `TileEntityEnchanter:102` and `TileEntityFreezer:101` call
+`AetherHooks.onItemEnchant/onItemFreeze` outside the
+`if (!this.worldObj.isRemote)` block. The events therefore fire on both client
+and server; event listeners may run twice or perform client-only effects on the
+server.
+
+#### B31 — Some mobs spawn projectiles on the client
+
+**Files:**
+
+- `entities/hostile/EntityAechorPlant.java:135`
+- `entities/hostile/EntityCockatrice.java:109`
+- `entities/ai/aechorplant/AechorPlantAIShootPlayer.java:70` (dead AI class)
+
+These spawn poison needles/arrows without a `!worldObj.isRemote` guard. On the
+client this creates ghost entities and can cause visual/duplication
+inconsistencies. Guard the spawn (and ideally the AI logic) with the server
+side.
+
+#### B32 — Parachute items spawn client-side too
+
+**File:** `items/tools/ItemAetherParachute.java:18-35`
+
+`onItemRightClick` calls `world.spawnEntityInWorld(...)` and consumes/ damages
+the stack on both sides. The server also spawns the parachute, so the client can
+end up with a locally created, unsynced parachute in addition to the server
+entity. Guard the spawn and inventory mutation with `!world.isRemote`.
+
+#### B33 — `AetherLore` can NPE for unregistered/custom items
+
+**File:** `registry/AetherLore.java:9-22`
+
+`GameRegistry.findUniqueIdentifierFor(stack.getItem())` can return `null` for
+items that are not registered through the GameRegistry (custom stacks, some
+vanilla/foreign items, or a null stack). The code immediately dereferences
+`.modId`. `SlotLore.isItemValid` calls this for any item placed in the lore slot.
+
+**Fix:** null-check both `stack` and the `UniqueIdentifier`, and return a
+sentinel key or `""` for unknown items.
+
+#### B34 — Log double-drop uses rotation metadata
+
+**File:** `blocks/natural/BlockAetherLog.java:42, 107-114`
+
+`int size = meta == 0 ? 2 : 1;` treats the log block metadata as a species flag,
+but `BlockLog` metadata is the log axis/orientation (`0..3`). One quarter of
+logs in each orientation get double drops from a skyroot tool. Additionally,
+`getItemDropped` always returns `skyroot_log`, even for `golden_oak_log`; golden
+logs therefore generally drop skyroot logs unless the special harvest path is
+used.
+
+**Fix:** base double-drop on the block/item type, not on `meta`; return
+`golden_oak_log` for the golden block (with the intended special-case amber drop).
+
+#### B35 — Player accessory renderer has state bugs
+
+**File:** `client/renders/entity/PlayerAetherRenderer.java`
+
+- `line 129`: `this.modelWings.isSneak` is assigned twice; `modelGlow.isSneak`
+  is never set.
+- `line 143`: `model.onGround` is set to `player.getSwingProgress(partialTicks)`
+  rather than `player.onGround`. This makes arm/leg animation depend on swing
+  progress.
+- Shield texture selection at lines 396-405 binds `shield.texture_inactive`
+  even when `hasInactiveTexture()` is false; a shield accessory without an
+  inactive texture can try to bind a null texture. Guard the null case and use
+  the active texture as a fallback.
+- `isCapeRendering` is set during `RenderLivingEvent.Post`, but read during
+  `RenderPlayerEvent.Specials.Pre`. The value is therefore from the previous
+  player/frame and can hide/show the vanilla cape incorrectly for one frame.
+
+#### B36 — Loading-screen framebuffer is never deleted
+
+**File:** `client/gui/AetherLoadingScreen.java:34-35`
+
+Every `AetherLoadingScreen` allocates a full-resolution `Framebuffer` and there
+is no `deleteFramebuffer()` call when the loading screen is replaced. Repeated
+world loads can leak VRAM. The framebuffer is also sized once at construction
+and not resized if the window changes size.
+
+**Fix:** override/implement cleanup when the loading screen is discarded, or
+reuse a single framebuffer and resize it through `createBindFramebuffer`.
+
+#### B37 — World tick handler runs twice per tick and creates AetherData in every world
+
+**File:** `AetherEventHandler.java:357-399`
+
+`TickEvent.WorldTickEvent` is fired for both `START` and `END`, but the method
+does not check `event.phase`. It also calls
+`AetherData.getInstance(event.world)` before checking whether the world is an
+Aether world, which creates/loads the Aether data map in the overworld and every
+other dimension.
+
+**Fix:** return unless `event.phase == TickEvent.Phase.END` (or START), and move
+the `AetherData` lookup inside the `provider instanceof AetherWorldProvider`
+branch.
+
+#### B38 — Config code has duplicate/dead state
+
+**File:** `AetherConfig.java:36-44, 100-106`
+
+- `book_of_lore` is assigned twice; the second assignment reads the Golden
+  Parachute option into the Book of Lore field.
+- `golden_parachute` is never assigned or read.
+- `toggle_music` and `boss_names` are loaded into fields but all runtime uses
+  read `AetherConfig.config.get(...)` directly instead.
+- `shouldFloatWithBlock()`, `menuEnabled()` and `menuButtonEnabled()` have no
+  callers.
+
+This is not currently a gameplay bug (the gameplay paths read the config
+directly), but it is misleading and makes future changes easy to get wrong.
+
+#### B39 — Mod version is hardcoded and stale
+
+**File:** `Aether.java:25`
+
+```java
+@Mod(modid = Aether.MOD_ID, version = "v1.1.2.5")
+```
+
+The build generates `com.gildedgames.the_aether.Tags.VERSION`
+(`generateGradleTokenClass = com.gildedgames.the_aether.Tags`), currently
+something like `2.0.0-main+...`, but the mod annotation ignores it. The mod
+metadata and reported version disagree.
+
+**Fix:** use `version = Tags.VERSION` (same package, no import needed), or
+remove the build token configuration if the hardcoded version is intentional.
+
+#### B40 — Slab translation keys are missing the `tile.` prefix
+
+**Files:** `src/main/resources/assets/aether_legacy/lang/en_US.lang:221-235` (and
+the corresponding lines in every other language).
+
+The half-slab entries are written as:
+
+```text
+skyroot_slab.name=Skyroot Slab
+carved_slab.name=Carved Slab
+...
+```
+
+But `ItemBlock`/`Block` resolve block item names as `tile.<blockName>.name`.
+The double-slab keys already use `tile.`. As a result, normal slabs show raw
+translation keys in inventory.
+
+**Fix:** prefix all eight half-slab keys with `tile.`.
+
+#### B41 — Packet-based perks are not validated server-side
+
+**File:** `network/packets/PacketPerkChanged.java:90-112`
+
+The handler only checks that the packet’s entity ID matches the sender. It does
+not check that the player is ranked/developer for HALO/GLOW, nor that the player
+is permitted to use a custom Moa skin. The renderer gates halo/glow, but
+`MoaRenderer` accepts any non-default `donatorMoaSkin` for a player. A client can
+therefore spoof donator/developer cosmetic data.
+
+**Fix:** validate `AetherRankings.isRankedPlayer` / `isDeveloper` on the server
+before changing the corresponding fields; ignore unauthorized values.
+
+#### B42 — `ItemZaniteSword.getItemAttributeModifiers()` returns null
+
+**File:** `items/weapons/ItemZaniteSword.java:24-27`
+
+`getAttributeModifiers(ItemStack)` is overridden correctly, so normal
+`ItemStack` use works, but any caller of the deprecated `getItemAttributeModifiers`
+gets `null` and can NPE. Return an empty multimap (or the super value) instead
+of null.
+
+#### B43 — `ItemMoaEgg` can NPE in creative placement
+
+**File:** `items/ItemMoaEgg.java:55-62`
+
+In creative mode, `onItemUse` calls `stack.getTagCompound().getInteger("typeId")`
+without a null check. An egg without NBT (custom/legacy stack, or one created
+via `/give` without tags) throws. Use
+`getMoaTypeFromItemStack(stack)`, which already handles a null tag.
+
+### Medium/Low robustness issues
+
+- `block/dungeon/BlockTreasureChest.java:29-47` casts the tile entity to
+  `TileEntityTreasureChest` without an `instanceof` check and does not null-check
+  in `getExplosionResistance`/`onBlockActivated`. A missing/replaced tile entity
+  causes a `ClassCastException` or NPE.
+- `entity/bosses/slider/EntitySlider.java:386-401` `checkIsAir` calls
+  `blockList.get(1)` and can throw if the checked region contains one block.
+  Callers currently use larger regions, but the helper is unsafe.
+- `entity/bosses/EntityValkyrie.java:296-308` saves `safeX/safeY/safeZ` as
+  `double` but reads them with `getInteger`, truncating the coordinates.
+  `EntityValkyrieQueen:405-410` also reads the safe-position list without a size
+  check.
+- `entity/hostile/EntityAechorPlant.java` has an arbitrary `knockBack` guard:
+  `if (this.getHealth() >= 0) return;` means the knockback only happens at
+  negative health. For an immobile plant, returning unconditionally (or using
+  `> 0`) is clearer.
+- `entity/hostile/EntityCockatrice.java:applyEntityAttributes` calls
+  `setHealth(10)` but never sets the max-health base value, so the max remains
+  the default 20 while the current health starts at 10. Confirm the intended
+  value and set `maxHealth`.
+- `entity/passive/EntityAerbunny.java:110-117` and `EntityFlyingCow`/`EntityPhyg`
+  contain dead inner conditions (`if (!isOnGround()) { if (isOnGround()) ... }`).
+- `entity/passive/EntityAetherAnimal.java:14` has an unused `Random` field;
+  `ItemAetherTool.random`, `AetherDungeon.random` and several other fields are
+  similarly unused.
+- `util/FilledList.add(int, E)` ignores the index and calls `List.add` on a
+  fixed-size `Arrays.asList` view; it should throw/implement insertion
+  correctly or be removed if unused.
+- `items/weapons/ItemVampireBlade.java:36` casts `attacker` to `EntityPlayer`
+  unconditionally; a non-player attacker (command/mod-spawned equipped mob) can
+  crash. Use `instanceof`.
+- `items/weapons/ItemCandyCaneSword.java:30` and `ItemHolystoneSword.java:29`
+  create a new `Random` per hit and call `damageItem(..., attacker)` without a
+  null check on the attacker.
+- `items/tools/ItemSkyrootBucket.java:onBucketUsed` decrements the stack on the
+  client too; combined with the curative-item bug this can produce client/server
+  drift. Most item actions should be server-authoritative.
+- `blocks/BlockIcestone.java:onBlockAdded` converts a 7×7×7 region on both
+  client and server, with no side guard and no metadata update. It also never
+  uses `setTickRandomly` because there is no `updateTick`.
+- `world/biome/decoration/AetherGenFloatingIsland.java:89-93, 124-128, 167-171`
+  contains tautological conditions such as `if (z != 0 || z != 1)` (always true)
+  and `if (x != 0 || x != 1)` (always true). If those were meant to skip specific
+  offsets, use `&&` or explicit set membership. This changes which blocks are
+  overwritten during island generation.
+- `blocks/natural/BlockAetherOre.java:85` and `AetherEventHandler.java:327`
+  create a new `Random` for every drop/particle event. Use `world.rand`/a shared
+  `Random`.
+- `world/biome/AetherBiomeDecorator.java:66` prints `"Already decorating"` to
+  stdout. Use the ModLog/logger and reset state in a `finally` block; an
+  exception inside `genDecorations` currently leaves `this.world` set and
+  permanently disables decoration for subsequent chunks.
+- `network/packets/AetherPacket.java:17-25` dispatches client messages using
+  `Aether.proxy.getPlayer()`, which is not null-safe and assumes the packet is
+  handled on the client thread. Packet handlers should use the supplied
+  `MessageContext` and null-check the player/entity properties.
+- `network/packets/PacketAccessory.java:19-24, 44-55` stores the raw `ByteBuf`
+  (`readBuf`) and reads it later in `handleClient`. FML currently processes the
+  message synchronously enough for this to work, but it is use-after-release
+  waiting to happen. Parse the accessory data during `fromBytes` into fields.
+- `network/packets/PacketDisplayDialogue.java` and `PacketCheckKey.java` have no
+  senders (see dead code), so the generic server-dialogue system and the old
+  lore-key packet are effectively unused.
+- `inventory/slots/SlotLore.java:21` and `inventory/InventoryAccessories.java`
+  call registry/lookup helpers without null checks; see B33 and B11.
+- `client/gui/dialogue/entity/GuiValkyrieDialogue.java:getMedalDiaulogue` returns
+  as soon as it finds the first victory-medal stack. If that stack has fewer
+  than 10 medals, the GUI reports “not enough” even when another stack in the
+  inventory would bring the total to 10. `PacketInitiateValkyrieFight` also
+  requires all 10 medals in one slot. Sum the medal count across the inventory
+  (or update the UI/server check to accept multiple stacks) if the intended
+  entry fee is 10 total medals.
+
+---
+
+## 4. Performance and optimization opportunities
+
+### P01 — Reflection in the player tick
+
+`PlayerAether.onUpdate` performs a reflective field lookup for `isJumping` on
+every player every tick. Cache the `Field` or, better, replace the data flow
+with a client-side input flag plus a small server packet (see reflection table).
+
+### P02 — AetherData NBT reads/writes on every check
+
+`AetherData.isEternalDay()`, `isShouldCycleCatchup()` and `getAetherTime()` all
+read from `NBTTagCompound` on every call. `setAetherTime` calls `markDirty()` on
+every increment. Keep authoritative primitive fields in memory, read NBT only on
+load, and write on save/change.
+
+### P03 — Sun Spirit and Whirlwind scans
+
+- `EntitySunSpirit.evapWater` and `unlockTreasure` are quadratic scans run from
+  the entity update path (see B23).
+- `EntityWhirlwind.onLivingUpdate` performs
+  `getEntitiesWithinAABBExcludingEntity` over a 5×5×5 region every tick and
+  allocates an `ArrayList`/`HashSet` in `checkRegion`/`AerwhaleAIUnstuck`.
+- `EntityFloatingBlock` scans nearby entities every tick.
+- `EntityHook.onUpdate` performs three separate target checks
+  (`getAttackTarget`, `getEntityToAttack`, `getAITarget`) for every living
+  non-player entity. One `getAITarget()` check plus a null/instanceof guard is
+  sufficient.
+
+### P04 — Network
+
+- Swet jump packets (B14) are the largest offender.
+- `PacketUpdateLifeShardCount` is sent with `sendToAll` when the player is at
+  max shards (`PlayerAether.java:645`). Only the owning player needs this value.
+- Several packet classes instantiate new objects every tick even when the value
+  did not change; `PlayerAether` already has a good change-detection pattern for
+  perks/cape, extend it to shards and other repeated state.
+
+### P05 — World generation
+
+- `AetherGenDungeonOakTree` is attempted 25 times per chunk but is effectively
+  unreachable at the surface (B29).
+- `AetherGenClouds` calls `setBlockAndNotifyAdequately` for every cloud block and
+  can drift far outside the current chunk (the initial x/z is `chunkX + rand(16)`
+  and the amount loop moves up to ±50). Add chunk-bounds checks and use a
+  lighter block setter during generation.
+- `AetherGenFloatingIsland` scans ~7,400 blocks per attempt and contains
+  tautological conditions (see B29/refactor list).
+- `AetherBiomeDecorator` allocates a new `WorldGenLakes`/tree generator per
+  decoration; reuse the existing fields/tree generator cache.
+- `ComponentGoldenIsland` contains commented-out tree/lake generation; the
+  golden islands are currently barren (feature gap) while the surface decorator
+  spends attempts on a tree generator that cannot match.
+
+### P06 — Client rendering / loading
+
+- `AetherLoadingScreen` allocates a full-resolution framebuffer per instance and
+  never deletes it (B36).
+- `AetherItemRenderer` copies almost the entire vanilla first-person item
+  renderer. Maintainability and future 1.7.10 patches are a concern; prefer
+  per-item `IItemRenderer`s or a `RenderHandEvent` hook.
+- `AetherClientEvents.onClientTick` calls `GameSettings.isKeyDown`/`Mouse` event
+  state every tick; `handleExtendedReach` checks `Mouse.getEventButton` outside
+  the actual mouse-event loop. This can use stale event state and trigger more
+  than once per click. Use `MouseEvent`/`InputEvent` where possible.
+- `AetherConfig.config.get(...)` is called repeatedly in GUI/music tick paths
+  instead of cached getters. Negligible individually, but it appears on every
+  tick/GUI open and makes the config API harder to reason about.
+
+### P07 — Repeated registry key construction
+
+`AetherAPI` builds a new `ResourceLocation` by concatenating unlocalized names
+for every lookup. Extract:
+
+```java
+private static ResourceLocation key(ItemStack stack) { ... }
+```
+
+and cache entries where practical. The six `HashMap`s are also initialized with
+capacity 4096 while holding a few dozen entries; use default capacity or
+`LinkedHashMap` for stable iteration order.
+
+### P08 — Trivia file reads
+
+`AetherTrivia.getNewTrivia()` may read the same localization file up to three
+times (locale, en_US fallback), and `AetherLoadingScreen` calls it whenever the
+loading screen is initialized. Cache the parsed lists per language code.
+
+---
+
+## 5. Refactoring opportunities
+
+1. **Unify the two dungeon-system base classes.**
+   `world/dungeon/util/AetherDungeon` and `world/gen/AetherStructure` duplicate
+   almost the same `addLine*`, `addPlane*`, `addHollowBox`, `addSolidBox` and
+   block-placement logic. `AetherDungeon` also has the early-return bug in every
+   `chance == 0` branch. Keep one implementation and make both dungeon
+   generators use it.
+
+2. **Extract the repeated container block-break code.**
+   `BlockEnchanter`, `BlockFreezer` and `BlockIncubator` each contain nearly
+   identical `breakBlock` item-spawning code. Move it to a helper accepting an
+   `AetherTileEntity`.
+
+3. **Replace the duplicated output/merge logic in tile entities.**
+   `TileEntityEnchanter` and `TileEntityFreezer` share most of the progress,
+   fuel, NBT transfer and output merging code. A small shared base class with
+   type-specific hooks would reduce the chance of fixing a bug in only one of
+   them.
+
+4. **Make ability access typed.**
+   `PlayerAetherEvents` accesses `getAbilities().get(3)` for repulsion and casts
+   the accessory inventory to the concrete `InventoryAccessories`. Add named
+   ability getters/interface methods to avoid brittle index/implementation
+   casts.
+
+5. **Centralize item drop logic.**
+   `BlockAetherOre`, `BlockAetherLog`, `DoubleDropHelper` and
+   `BlockEnchanter/Freezer/Incubator` all reimplement parts of the harvest/drop
+   algorithm. One helper with explicit policies would remove the metadata and
+   null-drop bugs.
+
+6. **Remove the unused `name` parameter from `AetherRegistries.register`/
+   `registerShapeless`**, or actually use it for recipe IDs/debugging.
+   Currently every call passes a name that is silently discarded.
+
+7. **Use a stable registry abstraction in `AetherAPI`.**
+   Replace the repeated `HashMap<ResourceLocation, ...>` boilerplate with a
+   small typed registry class, `LinkedHashMap` for registration-order-sensitive
+   content, and a shared key helper.
+
+8. **Localize hardcoded GUI strings.**
+   `GuiSunAltar` (“Sun Altar”, “Select Time”), `GuiAetherPerks` (many labels),
+   `GuiTreasureChest` fallback “platinum”, etc. Should use `I18n.format`.
+
+9. **Separate optional-mod integration.**
+   Keep all Battlegear/NEI references behind dedicated classes loaded only when
+   `Loader.isModLoaded` is true.
+
+10. **Add tests for the pure logic.**
+    `AetherWorldProvider` time math, `PacketSetTime.setTime`, zanite durability
+    scaling, accessory strength calculation, moa ID mapping, and the dungeon
+    structure helpers are testable without a full Minecraft client. The initial
+    infrastructure and baseline suite are described in section 10.
+
+---
+
+## 6. Dead code and unreachable features
+
+The following classes are not referenced from anywhere outside themselves (or
+are referenced only by other dead code):
+
+| Class | Notes |
+|---|---|
+| `entities/ai/aechorplant/AechorPlantAIShootPlayer` | Duplicated logic inside `EntityAechorPlant`; never registered. |
+| `entities/ai/EntityAIUpdateState` | Never added to any entity task list. |
+| `entities/ai/zephyr/ZephyrAIShootTarget` | Duplicated in `EntityZephyr.updateEntityActionState()`. |
+| `entities/ai/zephyr/ZephyrAITravelCourse` | Duplicated in `EntityZephyr.updateEntityActionState()`. |
+| `entities/particles/EntityBlueFX` | Never spawned. |
+| `entities/particles/EntityCloudSmokeFX` | Never spawned. |
+| `entities/particles/EntityGoldenFX` | Never spawned. |
+| `entities/particles/EntityPurpleFX` | Never spawned. |
+| `items/util/EnumGummySwetType` | `ItemGummySwet` hardcodes the two type names instead. |
+| `client/gui/button/GuiAetherButton` | Never instantiated. |
+| `client/gui/button/GuiDescButton` | Never instantiated; also compares strings with `==`. |
+| `world/biome/decoration/AetherGenCave` | Never called. |
+| `world/biome/decoration/AetherGenLakes` | Declared in `AetherBiomeDecorator` but `aether_lakes` is never used. |
+| `world/biome/decoration/AetherGenLiquids` | Declared in `AetherBiomeDecorator` but `liquid_overhang` is never used. |
+| `network/packets/PacketDisplayDialogue` | No sender; generic dialogue GUI is unreachable. |
+| `network/packets/PacketCheckKey` | No sender; handler is intentionally empty. |
+| `client/gui/inventory/GuiAetherPerks` | Its only button is commented out in `GuiAccessories`; also has `Integer.decode("0x" + text)` calls that can throw on invalid input. |
+
+Other dead/unused members:
+
+- `AetherConfig`: `book_of_lore`, `golden_parachute`, `toggle_music`, `boss_names`
+  fields and `shouldFloatWithBlock()`, `menuEnabled()`, `menuButtonEnabled()`
+  getters.
+- `AetherOverlay.getCureAlpha` (renderCure hardcodes `0.5F`).
+- `PlayerAether.isDonator()` returns `true` unconditionally and is only used in a
+  commented-out GUI block.
+- `PlayerAether.clouds` loop skips removals (B13).
+- `EntityValkyrie.timeLeft`, `EntityValkyrieQueen.timeLeft`/`otherDimension()`
+  and `getMedals()`.
+- `EntityWhirlwind.isRainbow` is never set to true; `canDropItems` is only read
+  from NBT and never changed.
+- `EntityMoa` `secsUntilFlying`/`secsUntilWalking` fields (declared, never used).
+- `ItemAetherTool.random`, `AetherDungeon.random`, `EntityAetherAnimal.random`,
+  `AetherGenLakes` dead fields.
+- `AetherMainMenu` demo button IDs 11/12 are handled but no demo buttons are
+  added.
+- `ComponentGoldenIsland`/`ComponentGoldenIslandStub` have commented-out golden
+  oak tree and lake generation (`AetherGenUtils.generateGoldenOakTree(...)`).
+- `AetherGenDungeonOakTree` is effectively dead in its current call site (B29).
+- `EntitySlider` `hasActivated`/`timeFloated`-like unused fields (if retained;
+  check with an IDE's unused-field inspection).
+
+---
+
+## 7. Feature ideas / gaps
+
+1. **OreDictionary integration**: register Aether logs, planks, ores, gems,
+   stone types and sticks (`logWood`, `plankWood`, `oreZanite`, `gemZanite`,
+   `blockHolystone`, etc.). This is currently almost absent and limits
+   cross-mod recipes.
+2. **NEI integration**: since NEI is already a development runtime dependency,
+   add optional recipe handlers for the enchanter/freezer/incubator and guard
+   them behind a separate compatibility class.
+3. **Golden-island vegetation**: re-enable the commented-out golden oak trees and
+   lakes in `ComponentGoldenIsland`/`Stub`.
+4. **Generic dialogue system**: `PacketDisplayDialogue` and `GuiServerDialogue`
+   already exist but are never used. Wire them into a dialogue registry/API
+   instead of hardcoded boss chat.
+5. **Donator perk customization**: `GuiAetherPerks` is unreachable; either wire
+   the button in `GuiAccessories` or remove the dead feature. The Moa skin
+   payload should be permission-checked server-side.
+6. **Config validation**: clamp/validate dimension IDs, biome IDs, potion IDs and
+   spawn rates; reject collisions with other mods rather than crashing during
+   registration.
+7. **Data-driven loot tables**: dungeon loot is currently a set of `switch`
+   statements. Move it to JSON/NBT-backed tables for pack authors and easier
+   testing.
+8. **Boss arena state**: make the Slider/Valkyrie Queen/Sun Spirit unlock and
+   door logic explicitly stateful and idempotent; currently several checks run
+   every tick and can repeat achievements/messages.
+9. **Localization coverage**: finish the missing slab keys and replace hardcoded
+   GUI strings; several languages only translate a subset of the newer content.
+10. **Tests and CI**: add unit tests for packet math/time/loot and a headless
+    `runServer` smoke test. The current CI only compiles/builds.
+
+---
+
+## 8. Suggested priority order
+
+1. **Immediate user-visible correctness**
+   - B01 custom HUD.
+   - B02 spawn-egg breeding.
+   - B03 tool attack damage.
+   - B04 remedy cure.
+   - B05 null leaf drops.
+   - B06 global bucket mutation.
+   - B07 Valkyrie teleport.
+   - B08 Slider focus.
+2. **Crash/NPE hardening**
+   - B19 MiniCloud, B20 Crystal, B33 AetherLore, B43 Moa egg,
+     B40/B41 packet/config issues, B19/B30 tile-entity casts.
+3. **Boss and world logic**
+   - B23 Sun Spirit, B24 Valkyrie Queen, B27/B28 worldgen, B30 freezer.
+4. **Performance**
+   - B14 Swet networking, B09/P02 time data, P03 entity scans, B36 framebuffer.
+5. **Reflection removal**
+   - Dungeon keys via `EntityAetherItem`, spawn-egg factory, remove
+     `Class.forName`, then tackle the GUI/EntityRenderer/`isJumping` cases.
+6. **Dead code/refactors/features**
+   - Remove or wire the dead classes, finish localization, add OreDictionary
+     integration and tests.
+
+---
+
+## 9. Verification notes
+
+- `dependencies.gradle` was updated and the project builds successfully with
+  `./gradlew build --no-configuration-cache`.
+- `./gradlew test`, `./gradlew jacocoTestReport`, and `./gradlew gameTestServer`
+  pass.
+- A `clean build` can hit a Windows file lock on
+  `build/rfg/recompiled_minecraft-1.7.10.jar` when the Gradle daemon/IDE still
+  holds it; `./gradlew --stop` resolves that local-only issue.
+- `spotlessCheck` and `checkstyleMain` pass.
+- Unit tests and an in-game server test mod now exist (section 10). The
+  behavioral bugs above should still be validated in a client/server test
+  world; add regression tests as they are fixed.
+- No access-transformer files, mixin files, or ASM transformer code were found.
+- Reflection was searched with:
+  `ObfuscationReflectionHelper|ReflectionHelper|Class.forName|getConstructor|getDeclared|setAccessible|MethodHandles|newInstance`
+  and all hits are listed in section 2.
+
+---
+
+## 10. Test baseline infrastructure (implemented)
+
+The project now has a headless unit-test suite and an in-game dedicated-server test
+mod. Neither test source set is included in the published mod jar.
+
+### Unit tests
+
+- **Build wiring:** `addon.gradle.kts`
+  - JUnit 4.13.2
+  - Mockito 4.11.0 (`mockito-core` + `mockito-inline`)
+  - Java 8 test launcher, matching the mod's Java 8 bytecode
+  - `testCompileClasspath`/`testRuntimeClasspath` extend `compileOnly` so tests
+    can load production classes that reference optional dependencies.
+- **Sources:** `src/test/java`
+  - `UtilityTest`: `FilledList`, `RandomTracker`
+  - `EnumMappingTest`: bucket, dungeon-key, dart, accessory and tool enums
+  - `AetherAPIRegistryTest`: accessory/enchantment/fuel/freezable registry
+    round-trips using Mockito mocks
+  - `PacketRoundTripTest`: `PacketSetTime`, `PacketDisplayDialogue`,
+    `PacketInitiateValkyrieFight` serialization
+- **Commands:**
+  - `./gradlew test`
+  - `./gradlew jacocoTestReport`
+  - `./gradlew check` (runs the suite and generates the JaCoCo report)
+
+### JaCoCo baseline
+
+JaCoCo 0.8.16 is attached to the unit-test JVM and `check` now depends on
+`jacocoTestReport`.
+
+Current baseline from this workspace (18 tests, all passing):
+
+| Counter | Covered | Missed | Coverage |
+|---|---:|---:|---:|
+| LINE | 340 | 19,161 | 1.74% |
+| BRANCH | 63 | 9,180 | 0.68% |
+| METHOD | 83 | 2,583 | 3.11% |
+| CLASS | 22 | 381 | 5.46% |
+
+The low baseline is expected: the initial suite only covers pure utility/API
+code, while most of the mod needs the game. This is a regression baseline, not
+a target. Reports are written to:
+
+- `build/reports/jacoco/test/html/index.html`
+- `build/reports/jacoco/test/jacocoTestReport.xml`
+- `build/jacoco/test.exec`
+
+### In-game game test mod
+
+- **Source set:** `src/gameTest/java`
+- **Test-only mod:** `com.gildedgames.the_aether.gametest.GameTestMod`
+  - Mod ID `aether_legacy_gametest`
+  - `required-after:aether_legacy`
+  - Never included in the published jar
+- **Assertions:** `ServerGameTests`
+  - Block and item registry presence for representative Aether content
+  - Creative-tab icons
+  - Aether dimension/provider/biome registration
+  - Aether entity mappings
+  - Aether API accessory/enchantment/fuel/freezable/moa registries
+  - Lore lookup
+  - Crafting and furnace recipe presence
+  - A live block placement/read/restore in the overworld
+- **Command:**
+  - `./gradlew gameTestServer`
+  - The `prepareGameTestServer` task creates `run/server` and writes
+    `eula=true` if missing.
+  - The mod prints `AETHER_GAMETEST_OK` and exits 0 when all checks pass; it
+    prints `AETHER_GAMETEST_FAILED` and exits 1 on failure.
+
+Current result:
+
+```text
+[AETHER-GAMETEST] 84/84 checks passed
+AETHER_GAMETEST_OK
+BUILD SUCCESSFUL
+```
+
+The game-test run currently uses the plain Java 8 `runServer` task. If a future
+dependency requires lwjgl3ify, switch the `gameTestServer` dependency to
+`runServer25` and keep the same classpath/system-property injection.
