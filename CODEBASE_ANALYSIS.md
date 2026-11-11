@@ -19,6 +19,26 @@ section 10 for the current unit-test and in-game test baseline.
 
 ---
 
+## 0. Behavior-preservation rule
+
+Do not trade intended Aether behavior for a mechanically cleaner-looking fix. Before
+changing gameplay semantics, check the in-game lore text, language files, recipes,
+config comments, docs, git history, and the upstream 1.7.10/Aether II behavior. A
+code path that looks odd may be deliberate. In particular:
+
+- A normal golden oak log drop is **skyroot logs** (plus golden amber from a
+  suitable axe); it drops itself only through silk touch.
+- Treat metadata as orientation/state unless the block explicitly defines species
+  metadata. Do not infer species from `BlockLog` axis bits.
+- If a fix necessarily changes behavior, document the intended behavior and add a
+  regression assertion before committing it.
+- When a finding conflicts with the lore or with an established mechanic, stop and
+  confirm the intended behavior instead of “fixing” it.
+
+The sixth batch and later changes should follow this rule.
+
+---
+
 ## 1. Dependency audit (`dependencies.gradle`)
 
 `dependencies.gradle` originally pinned:
