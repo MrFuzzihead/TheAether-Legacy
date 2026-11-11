@@ -1,8 +1,11 @@
 package com.gildedgames.the_aether.network.packets;
 
+import java.util.UUID;
+
 import net.minecraft.entity.player.EntityPlayer;
 
 import com.gildedgames.the_aether.player.PlayerAether;
+import com.gildedgames.the_aether.player.perks.AetherRankings;
 import com.gildedgames.the_aether.player.perks.util.DonatorMoaSkin;
 import com.gildedgames.the_aether.player.perks.util.EnumAetherPerkType;
 
@@ -86,6 +89,25 @@ public class PacketPerkChanged extends AetherPacket<PacketPerkChanged> {
         }
     }
 
+    static boolean canUsePerk(PlayerAether instance, EnumAetherPerkType type) {
+        if (instance == null || instance.getEntity() == null || type == null) {
+            return false;
+        }
+
+        UUID uuid = instance.getEntity()
+            .getUniqueID();
+
+        if (type == EnumAetherPerkType.Halo) {
+            return AetherRankings.isRankedPlayer(uuid);
+        } else if (type == EnumAetherPerkType.Glow) {
+            return AetherRankings.isDeveloper(uuid);
+        } else if (type == EnumAetherPerkType.Moa) {
+            return instance.isDonator() || AetherRankings.isRankedPlayer(uuid);
+        }
+
+        return false;
+    }
+
     @Override
     public void handleServer(PacketPerkChanged message, EntityPlayer player) {
         if (player != null && player.worldObj != null && !player.worldObj.isRemote) {
@@ -99,9 +121,13 @@ public class PacketPerkChanged extends AetherPacket<PacketPerkChanged> {
             if (parent != null) {
                 PlayerAether instance = PlayerAether.get(parent);
 
+                if (!canUsePerk(instance, message.perkType)) {
+                    return;
+                }
+
                 if (message.perkType == EnumAetherPerkType.Halo) {
                     instance.shouldRenderHalo = message.renderHalo;
-                } else if (message.perkType == EnumAetherPerkType.Moa) {
+                } else if (message.perkType == EnumAetherPerkType.Moa && message.moaSkin != null) {
                     instance.donatorMoaSkin = message.moaSkin;
                 } else if (message.perkType == EnumAetherPerkType.Glow) {
                     instance.shouldRenderGlow = message.renderGlow;

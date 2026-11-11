@@ -44,8 +44,7 @@ public abstract class AetherDungeon extends WorldGenerator {
             if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                 if (this.chance == 0) {
                     this.setBlockAndNotifyAdequately(world, lineX, pos.getY(), pos.getZ(), this.blockState, 0);
-
-                    return;
+                    continue;
                 }
 
                 if (rand.nextInt(this.chance) == 0) {
@@ -64,8 +63,7 @@ public abstract class AetherDungeon extends WorldGenerator {
             if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                 if (this.chance == 0) {
                     this.setBlockAndNotifyAdequately(world, pos.getX(), lineY, pos.getZ(), this.blockState, 0);
-
-                    return;
+                    continue;
                 }
 
                 if (rand.nextInt(this.chance) == 0) {
@@ -84,8 +82,7 @@ public abstract class AetherDungeon extends WorldGenerator {
             if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                 if (this.chance == 0) {
                     this.setBlockAndNotifyAdequately(world, pos.getX(), pos.getY(), lineZ, this.blockState, 0);
-
-                    return;
+                    continue;
                 }
 
                 if (rand.nextInt(this.chance) == 0) {
@@ -105,8 +102,7 @@ public abstract class AetherDungeon extends WorldGenerator {
                 if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                     if (this.chance == 0) {
                         this.setBlockAndNotifyAdequately(world, pos.getX(), lineY, lineZ, this.blockState, 0);
-
-                        return;
+                        continue;
                     }
 
                     if (rand.nextInt(this.chance) == 0) {
@@ -128,8 +124,7 @@ public abstract class AetherDungeon extends WorldGenerator {
                 if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                     if (this.chance == 0) {
                         this.setBlockAndNotifyAdequately(world, lineX, pos.getY(), lineZ, this.blockState, 0);
-
-                        return;
+                        continue;
                     }
 
                     if (rand.nextInt(this.chance) == 0) {
@@ -151,8 +146,7 @@ public abstract class AetherDungeon extends WorldGenerator {
                 if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                     if (this.chance == 0) {
                         this.setBlockAndNotifyAdequately(world, lineX, lineY, pos.getZ(), this.blockState, 0);
-
-                        return;
+                        continue;
                     }
 
                     if (rand.nextInt(this.chance) == 0) {
@@ -225,8 +219,7 @@ public abstract class AetherDungeon extends WorldGenerator {
                     if ((this.replaceAir || block != Blocks.air) && (this.replaceSolid || block == Blocks.air)) {
                         if (this.chance == 0) {
                             this.setBlockAndNotifyAdequately(world, lineX, lineY, lineZ, this.blockState, 0);
-
-                            return;
+                            continue;
                         }
 
                         if (rand.nextInt(this.chance) == 0) {

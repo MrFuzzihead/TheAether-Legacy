@@ -726,8 +726,9 @@ the silk-touch path, and still drop golden amber from a suitable axe.
 - `line 129`: `this.modelWings.isSneak` is assigned twice; `modelGlow.isSneak`
   is never set.
 - `line 143`: `model.onGround` is set to `player.getSwingProgress(partialTicks)`
-  rather than `player.onGround`. This makes arm/leg animation depend on swing
-  progress.
+  rather than the interpolated limb-swing amount (`f6`). `ModelBiped.onGround`
+  is a float animation value, not the entity's boolean `onGround`; the current
+  value makes arm/leg animation depend on swing progress.
 - Shield texture selection at lines 396-405 binds `shield.texture_inactive`
   even when `hasInactiveTexture()` is false; a shield accessory without an
   inactive texture can try to bind a null texture. Guard the null case and use
@@ -1269,7 +1270,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 119/119 checks passed
+[AETHER-GAMETEST] 121/121 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1387,3 +1388,26 @@ made; the earlier report entry was based on a false positive.
 Added a language-key unit test, game-test assertions for Moa type order, log
 normal-drop species, and generated mod version. The baseline is now
 **119/119 in-game checks** and **24 unit tests**.
+
+### Sixth batch fix status
+
+- B23 — the Sun Spirit defeat path now runs once and persists `hasDefeated`;
+  achievements, eternal day, door removal and treasure unlocking are
+  server-authoritative. Fire/water/door/treasure/burn world changes are
+  server-side, the water scan runs on a 10-tick interval, and death/dialogue
+  chat is no longer gated by a stale chat cooldown.
+- B28 — Bronze Dungeon calls `determineRoomPosition` once. The latent
+  `chance == 0` branches in `AetherDungeon` now `continue` instead of returning
+  after the first block, so lines, planes and boxes fill correctly.
+- B35 — glow sneak state is assigned to `modelGlow`, `ModelBiped.onGround` uses
+  the interpolated limb-swing float, shields without an inactive texture fall
+  back to the active texture, and cape rendering is read directly from the
+  accessory inventory instead of cached state from the previous frame.
+- B36 — `AetherLoadingScreen` reuses a single shared framebuffer and resizes it
+  when the window changes, instead of leaking a framebuffer per loading screen.
+- B41 — perk packets are validated server-side: halo requires a ranked player,
+  glow requires a developer, and Moa skins require a donator/ranked player.
+
+Added unit coverage for the dungeon fill helpers and perk permissions, plus
+game-test coverage for Sun Spirit defeat-state persistence. The baseline is now
+**121/121 in-game checks** and **31 unit tests**.

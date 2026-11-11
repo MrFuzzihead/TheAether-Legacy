@@ -36,6 +36,7 @@ import net.minecraftforge.client.event.RenderPlayerEvent.SetArmorModel;
 import org.lwjgl.input.Mouse;
 
 import com.gildedgames.the_aether.AetherConfig;
+import com.gildedgames.the_aether.api.accessories.AccessoryType;
 import com.gildedgames.the_aether.client.gui.AetherLoadingScreen;
 import com.gildedgames.the_aether.client.gui.GuiCustomizationScreen;
 import com.gildedgames.the_aether.client.gui.GuiEnterAether;
@@ -460,8 +461,13 @@ public class AetherClientEvents {
 
     @SubscribeEvent
     public void onRenderAetherCape(RenderPlayerEvent.Specials.Pre event) {
-        event.renderCape = !PlayerAetherRenderer.instance()
-            .isCapeRendering();
+        PlayerAether playerAether = PlayerAether.get(event.entityPlayer);
+
+        // The Aether cape replaces the vanilla cape only when the player is
+        // actually wearing one. Read the inventory directly: this event runs
+        // before the accessory renderer, so cached state would be a frame late.
+        event.renderCape = playerAether == null || playerAether.getAccessoryInventory()
+            .getStackInSlot(AccessoryType.CAPE) == null;
     }
 
     @SubscribeEvent

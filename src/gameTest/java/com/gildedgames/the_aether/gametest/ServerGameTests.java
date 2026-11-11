@@ -22,6 +22,7 @@ import com.gildedgames.the_aether.AetherEventHandler;
 import com.gildedgames.the_aether.api.AetherAPI;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.entities.EntitiesAether;
+import com.gildedgames.the_aether.entities.bosses.sun_spirit.EntitySunSpirit;
 import com.gildedgames.the_aether.entities.effects.EffectInebriation;
 import com.gildedgames.the_aether.entities.effects.PotionInebriation;
 import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
@@ -91,6 +92,7 @@ public final class ServerGameTests {
         checkFreezerBonus();
         checkMoaTypeOrder();
         checkLogDrops();
+        checkSunSpiritDefeatState();
         checkGeneratedVersion();
 
         return failures;
@@ -382,6 +384,28 @@ public final class ServerGameTests {
             "golden oak logs drop skyroot logs without silk touch",
             BlocksAether.golden_oak_log.getItemDropped(0, world.rand, 0)
                 == Item.getItemFromBlock(BlocksAether.skyroot_log));
+    }
+
+    private static void checkSunSpiritDefeatState() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for Sun Spirit checks", false);
+            return;
+        }
+
+        EntitySunSpirit spirit = new EntitySunSpirit(world);
+        check("Sun Spirit starts undefeated", !spirit.hasDefeated);
+
+        spirit.hasDefeated = true;
+
+        NBTTagCompound tag = new NBTTagCompound();
+        spirit.writeEntityToNBT(tag);
+
+        EntitySunSpirit loaded = new EntitySunSpirit(world);
+        loaded.readEntityFromNBT(tag);
+
+        check("Sun Spirit defeat state persists", loaded.hasDefeated);
     }
 
     private static void checkGeneratedVersion() {
