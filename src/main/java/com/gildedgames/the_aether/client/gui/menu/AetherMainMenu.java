@@ -72,10 +72,8 @@ public class AetherMainMenu extends GuiMainMenu {
         new ResourceLocation("aether_legacy", "textures/gui/menu/panorama/panorama_3.png"),
         new ResourceLocation("aether_legacy", "textures/gui/menu/panorama/panorama_4.png"),
         new ResourceLocation("aether_legacy", "textures/gui/menu/panorama/panorama_5.png") };
-    public static final String field_96138_a = "Please click " + EnumChatFormatting.UNDERLINE
-        + "here"
-        + EnumChatFormatting.RESET
-        + " for more information.";
+    public static final String field_96138_a = I18n
+        .format("gui.aether_menu.info", EnumChatFormatting.UNDERLINE + "here" + EnumChatFormatting.RESET);
     private int field_92024_r;
     private int field_92023_s;
     private int field_92022_t;
@@ -202,7 +200,11 @@ public class AetherMainMenu extends GuiMainMenu {
             30,
             p_73969_1_ + p_73969_2_ * 2,
             I18n.format("menu.online", new Object[0]));
-        GuiButton fmlModButton = new AetherMainMenuButton(6, 30, p_73969_1_ + p_73969_2_ * 3, "Mods");
+        GuiButton fmlModButton = new AetherMainMenuButton(
+            6,
+            30,
+            p_73969_1_ + p_73969_2_ * 3,
+            I18n.format("gui.aether_menu.mods"));
         this.buttonList.add(realmsButton);
         this.buttonList.add(fmlModButton);
         this.buttonList.add(

@@ -1562,3 +1562,24 @@ The baseline is now **125/125 in-game checks** and **57 unit tests**.
 Remaining refactor items: unify the two dungeon base classes, centralize item
 drop policies, optional `AetherMainMenu` localization, and the remaining
 pure-logic tests.
+
+### Refactor batch 5 status
+
+Completed refactors:
+
+- **Centralized drop primitives (item 5)** — added `AetherDropHelper` for mining
+  stats, fortune/silk-touch checks, stacked-block creation and item spawning.
+  `BlockAetherLog`, `BlockAetherOre` and `DoubleDropHelper` now use it instead
+  of repeating the harvest/enchantment/item-spawn logic.
+- **Main-menu localization (item 8 finish)** — the main-menu `Mods` button and
+  information text are localized; this closes the remaining active GUI strings
+  listed for this refactor item.
+- **More pure-logic tests (item 10)** — extracted the forward time delta used by
+  `PacketSetTime` and added boundary tests.
+
+The baseline is now **125/125 in-game checks** and **59 unit tests**.
+
+Only one refactor item remains: unifying the `AetherDungeon` and
+`AetherStructure` base classes. That is a larger structural rewrite because one
+is a `WorldGenerator` using absolute coordinates and the other is a
+`StructureComponent` using bounding-box-relative coordinates and metadata.

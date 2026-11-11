@@ -1,20 +1,15 @@
 package com.gildedgames.the_aether.blocks.natural;
 
-import java.util.ArrayList;
 import java.util.Random;
 
 import net.minecraft.block.BlockLog;
 import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.stats.StatList;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.World;
-import net.minecraftforge.event.ForgeEventFactory;
 
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.items.ItemsAether;
@@ -23,6 +18,7 @@ import com.gildedgames.the_aether.items.tools.ItemGravititeTool;
 import com.gildedgames.the_aether.items.tools.ItemSkyrootTool;
 import com.gildedgames.the_aether.items.tools.ItemValkyrieTool;
 import com.gildedgames.the_aether.items.tools.ItemZaniteTool;
+import com.gildedgames.the_aether.items.util.AetherDropHelper;
 import com.gildedgames.the_aether.items.util.EnumAetherToolType;
 
 import cpw.mods.fml.relauncher.Side;
@@ -36,25 +32,14 @@ public class BlockAetherLog extends BlockLog {
 
     @Override
     public void harvestBlock(World worldIn, EntityPlayer player, int x, int y, int z, int meta) {
-        player.addStat(StatList.mineBlockStatArray[getIdFromBlock(this)], 1);
-        player.addExhaustion(0.025F);
+        AetherDropHelper.addMiningStats(player, this);
 
         int size = this == BlocksAether.skyroot_log ? 2 : 1;
 
         ItemStack stack = player.getCurrentEquippedItem();
 
-        if (this.canSilkHarvest(worldIn, player, x, y, z, meta) && EnchantmentHelper.getSilkTouchModifier(player)) {
-            ArrayList<ItemStack> items = new ArrayList<ItemStack>();
-            ItemStack itemstack = this.createStackedBlock(meta);
-
-            if (itemstack != null) {
-                items.add(itemstack);
-            }
-
-            ForgeEventFactory.fireBlockHarvesting(items, worldIn, this, x, y, z, meta, 0, 1.0f, true, player);
-            for (ItemStack is : items) {
-                this.dropBlockAsItem(worldIn, x, y, z, is);
-            }
+        if (this.canSilkHarvest(worldIn, player, x, y, z, meta) && AetherDropHelper.hasSilkTouch(stack)) {
+            AetherDropHelper.dropSilkTouch(player, this, x, y, z, meta, stack);
         } else {
             if (stack != null && ((stack.getItem() instanceof ItemAetherTool
                 && ((ItemAetherTool) stack.getItem()).toolType == EnumAetherToolType.AXE)
@@ -71,31 +56,13 @@ public class BlockAetherLog extends BlockLog {
                             new ItemStack(ItemsAether.golden_amber, 1 + worldIn.rand.nextInt(2)));
                     }
 
-                    this.dropBlockAsItem(
-                        player.worldObj,
-                        x,
-                        y,
-                        z,
-                        meta,
-                        EnchantmentHelper.getEnchantmentLevel(Enchantment.fortune.effectId, stack));
+                    AetherDropHelper.dropWithFortune(player.worldObj, this, x, y, z, meta, stack);
                 } else if (stack.getItem() instanceof ItemSkyrootTool) {
                     for (int i = 0; i < size; ++i) {
-                        this.dropBlockAsItem(
-                            player.worldObj,
-                            x,
-                            y,
-                            z,
-                            meta,
-                            EnchantmentHelper.getEnchantmentLevel(Enchantment.fortune.effectId, stack));
+                        AetherDropHelper.dropWithFortune(player.worldObj, this, x, y, z, meta, stack);
                     }
                 } else {
-                    this.dropBlockAsItem(
-                        player.worldObj,
-                        x,
-                        y,
-                        z,
-                        meta,
-                        EnchantmentHelper.getEnchantmentLevel(Enchantment.fortune.effectId, stack));
+                    AetherDropHelper.dropWithFortune(player.worldObj, this, x, y, z, meta, stack);
                 }
             } else {
                 super.harvestBlock(worldIn, player, x, y, z, meta);

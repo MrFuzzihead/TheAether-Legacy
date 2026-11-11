@@ -429,6 +429,8 @@ gui.spirit.line10=Did your previous death not satisfy your curiosity, human?
 gui.spirit.dead=Such bitter cold... is this the feeling... of pain?
 gui.spirit.playerdied=Such is the fate of a being who opposes the might of the sun.
 
+gui.aether_menu.mods=Mods
+gui.aether_menu.info=Please click %s for more information.
 gui.perks.moa_customizer=Moa Customizer
 gui.perks.developer_perks=Developer Perks
 gui.perks.enable_halo=Enable Halo:

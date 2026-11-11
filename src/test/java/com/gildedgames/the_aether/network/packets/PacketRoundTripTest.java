@@ -64,6 +64,13 @@ public class PacketRoundTripTest {
     }
 
     @Test
+    public void timeDeltaMovesForwardToTheRequestedTime() {
+        assertEquals(6000L, PacketSetTime.calculateTimeDelta(0.25F, 0L));
+        assertEquals(24000L, PacketSetTime.calculateTimeDelta(0.25F, 6000L));
+        assertEquals(24000L, PacketSetTime.calculateTimeDelta(0.0F, 0L));
+    }
+
+    @Test
     public void valkyrieFightPacketRoundTrips() {
         ByteBuf buffer = Unpooled.buffer();
         PacketInitiateValkyrieFight original = new PacketInitiateValkyrieFight(3, 42);

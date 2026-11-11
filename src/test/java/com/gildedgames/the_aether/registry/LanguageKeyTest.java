@@ -69,6 +69,14 @@ public class LanguageKeyTest {
     }
 
     @Test
+    public void mainMenuStringsAreLocalized() throws IOException {
+        Set<String> keys = loadKeys();
+
+        assertTrue("missing main menu mods button", keys.contains("gui.aether_menu.mods"));
+        assertTrue("missing main menu info text", keys.contains("gui.aether_menu.info"));
+    }
+
+    @Test
     public void perkGuiStringsAreLocalized() throws IOException {
         Set<String> keys = loadKeys();
 

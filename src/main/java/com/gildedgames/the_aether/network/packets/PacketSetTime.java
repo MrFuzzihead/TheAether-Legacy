@@ -96,12 +96,18 @@ public class PacketSetTime extends AetherPacket<PacketSetTime> {
      * stale/secondary WorldServer whose WorldInfo is not the one the world
      * tick and sky rendering actually read.
      */
+    static long calculateTimeDelta(float sliderValue, long worldTime) {
+        long shouldTime = (long) (24000L * sliderValue);
+        long remainder = worldTime % 24000L;
+
+        return shouldTime > remainder ? shouldTime - remainder : shouldTime + 24000 - remainder;
+    }
+
     public void setTime(float sliderValue, WorldServer aetherServer) {
         long shouldTime = (long) (24000L * sliderValue);
         long worldTime = aetherServer.getWorldInfo()
             .getWorldTime();
-        long remainder = worldTime % 24000L;
-        long add = shouldTime > remainder ? shouldTime - remainder : shouldTime + 24000 - remainder;
+        long add = calculateTimeDelta(sliderValue, worldTime);
 
         // Best effort on the world's own clock (helps F3 / S03 sync where it
         // works).
