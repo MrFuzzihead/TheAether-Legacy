@@ -94,7 +94,7 @@ public class MapGenSilverDungeon extends MapGenStructure {
             this.firstStaircaseZ = tagCompound.getInteger("firstStaircaseZ");
             this.secondStaircaseZ = tagCompound.getInteger("secondStaircaseZ");
             this.finalStaircaseZ = tagCompound.getInteger("finalStaircaseZ");
-            this.xTendency = tagCompound.getInteger("zTendency");
+            this.xTendency = tagCompound.getInteger("xTendency");
             this.zTendency = tagCompound.getInteger("zTendency");
         }
 

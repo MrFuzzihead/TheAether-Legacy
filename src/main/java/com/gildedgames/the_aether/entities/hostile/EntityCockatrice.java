@@ -100,7 +100,7 @@ public class EntityCockatrice extends EntityMob {
     }
 
     public void shootTarget() {
-        if (this.worldObj.difficultySetting == EnumDifficulty.PEACEFUL) {
+        if (this.worldObj.isRemote || this.worldObj.difficultySetting == EnumDifficulty.PEACEFUL) {
             return;
         }
 

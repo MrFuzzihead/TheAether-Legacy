@@ -49,6 +49,21 @@ public class PacketRoundTripTest {
     }
 
     @Test
+    public void swetJumpPacketRoundTrips() {
+        ByteBuf buffer = Unpooled.buffer();
+        PacketSwetJump original = new PacketSwetJump(17, true);
+
+        original.toBytes(buffer);
+
+        PacketSwetJump decoded = new PacketSwetJump();
+        decoded.fromBytes(buffer);
+
+        assertEquals(17, decoded.id);
+        assertEquals(true, decoded.bool);
+        assertEquals(0, buffer.readableBytes());
+    }
+
+    @Test
     public void valkyrieFightPacketRoundTrips() {
         ByteBuf buffer = Unpooled.buffer();
         PacketInitiateValkyrieFight original = new PacketInitiateValkyrieFight(3, 42);

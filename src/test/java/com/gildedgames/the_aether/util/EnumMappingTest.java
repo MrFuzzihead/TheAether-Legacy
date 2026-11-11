@@ -7,6 +7,7 @@ import static org.junit.Assert.assertSame;
 import org.junit.Test;
 
 import com.gildedgames.the_aether.api.accessories.AccessoryType;
+import com.gildedgames.the_aether.entities.hostile.swet.EnumSwetType;
 import com.gildedgames.the_aether.entities.projectile.crystals.EnumCrystalType;
 import com.gildedgames.the_aether.items.util.EnumAetherToolType;
 import com.gildedgames.the_aether.items.util.EnumDartShooterType;
@@ -84,6 +85,14 @@ public class EnumMappingTest {
             AccessoryType.EXTRA_MISC,
             AccessoryType.createCompleteList()
                 .func_148745_a(7));
+    }
+
+    @Test
+    public void swetTypeLookupIsBoundsChecked() {
+        assertSame(EnumSwetType.BLUE, EnumSwetType.get(-1));
+        assertSame(EnumSwetType.BLUE, EnumSwetType.get(EnumSwetType.values().length));
+        assertSame(EnumSwetType.BLUE, EnumSwetType.get(999));
+        assertSame(EnumSwetType.GOLDEN, EnumSwetType.get(1));
     }
 
     @Test

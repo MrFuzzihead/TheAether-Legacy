@@ -96,10 +96,11 @@ public class TileEntityEnchanter extends AetherTileEntity {
                     } else {
                         this.decrStackSize(0, 1);
                     }
+
+                    AetherHooks.onItemEnchant(this, this.currentEnchantment);
                 }
 
                 this.progress = 0;
-                AetherHooks.onItemEnchant(this, this.currentEnchantment);
             }
 
             if (this.getStackInSlot(0) == null || (this.getStackInSlot(0) != null && AetherAPI.instance()

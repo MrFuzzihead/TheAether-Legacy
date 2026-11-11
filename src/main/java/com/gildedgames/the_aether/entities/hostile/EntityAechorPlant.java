@@ -109,7 +109,7 @@ public class EntityAechorPlant extends EntityAetherAnimal {
     }
 
     public void shootAtPlayer() {
-        if (this.worldObj.difficultySetting.equals(EnumDifficulty.PEACEFUL)) {
+        if (this.worldObj.isRemote || this.worldObj.difficultySetting.equals(EnumDifficulty.PEACEFUL)) {
             return;
         }
 

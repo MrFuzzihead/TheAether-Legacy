@@ -14,6 +14,8 @@ public enum EnumSwetType {
     }
 
     public static EnumSwetType get(int id) {
-        return values()[id];
+        EnumSwetType[] values = values();
+
+        return id >= 0 && id < values.length ? values[id] : BLUE;
     }
 }

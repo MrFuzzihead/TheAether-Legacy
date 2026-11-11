@@ -48,7 +48,7 @@ public class TileEntityFreezer extends AetherTileEntity {
             this.powerRemaining--;
 
             if (this.currentFreezable != null) {
-                if (this.worldObj.getBlock(this.xCoord, this.yCoord, this.zCoord) == BlocksAether.icestone) {
+                if (this.worldObj.getBlock(this.xCoord, this.yCoord - 1, this.zCoord) == BlocksAether.icestone) {
                     this.progress += 2;
                 } else {
                     this.progress++;
@@ -95,10 +95,11 @@ public class TileEntityFreezer extends AetherTileEntity {
                     } else {
                         this.decrStackSize(0, 1);
                     }
+
+                    AetherHooks.onItemFreeze(this, this.currentFreezable);
                 }
 
                 this.progress = 0;
-                AetherHooks.onItemFreeze(this, this.currentFreezable);
             }
 
             if (this.getStackInSlot(0) == null || (this.getStackInSlot(0) != null && AetherAPI.instance()

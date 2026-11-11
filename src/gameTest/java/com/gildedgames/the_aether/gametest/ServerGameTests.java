@@ -24,6 +24,7 @@ import com.gildedgames.the_aether.entities.EntitiesAether;
 import com.gildedgames.the_aether.entities.effects.EffectInebriation;
 import com.gildedgames.the_aether.entities.effects.PotionInebriation;
 import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
+import com.gildedgames.the_aether.entities.passive.mountable.EntitySwet;
 import com.gildedgames.the_aether.entities.projectile.crystals.EntityCrystal;
 import com.gildedgames.the_aether.entities.projectile.crystals.EnumCrystalType;
 import com.gildedgames.the_aether.items.ItemMoaEgg;
@@ -32,6 +33,7 @@ import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
 import com.gildedgames.the_aether.items.weapons.ItemZaniteSword;
 import com.gildedgames.the_aether.registry.AetherLore;
 import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
+import com.gildedgames.the_aether.tileentity.TileEntityFreezer;
 import com.gildedgames.the_aether.world.AetherData;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 import com.google.common.collect.Multimap;
@@ -82,6 +84,8 @@ public final class ServerGameTests {
         checkCrystalSafety();
         checkMoaAndLoreSafety();
         checkZaniteSwordAttributeMap();
+        checkSwetBehavior();
+        checkFreezerBonus();
 
         return failures;
     }
@@ -335,6 +339,57 @@ public final class ServerGameTests {
                     == null);
 
         check("lore lookup handles a null stack", AetherLore.getLoreEntryKey(null) == null);
+    }
+
+    private static void checkSwetBehavior() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for swet checks", false);
+            return;
+        }
+
+        EntitySwet swet = new EntitySwet(world);
+        check("non-friendly swets are allowed to despawn", swet.canDespawn());
+    }
+
+    private static void checkFreezerBonus() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for freezer checks", false);
+            return;
+        }
+
+        int x = 6;
+        int y = 120;
+        int z = 6;
+        Block oldBlock = world.getBlock(x, y, z);
+        int oldMeta = world.getBlockMetadata(x, y, z);
+        Block oldBelow = world.getBlock(x, y - 1, z);
+        int oldBelowMeta = world.getBlockMetadata(x, y - 1, z);
+
+        try {
+            world.setBlock(x, y - 1, z, BlocksAether.icestone);
+            world.setBlock(x, y, z, BlocksAether.freezer);
+
+            TileEntityFreezer freezer = (TileEntityFreezer) world.getTileEntity(x, y, z);
+            check("freezer tile entity exists", freezer != null);
+
+            if (freezer != null) {
+                freezer.setInventorySlotContents(0, new ItemStack(Items.water_bucket));
+                freezer.setInventorySlotContents(1, new ItemStack(BlocksAether.icestone));
+
+                freezer.updateEntity();
+                freezer.updateEntity();
+                freezer.updateEntity();
+
+                check("icestone below a freezer doubles freeze progress", freezer.progress == 2);
+            }
+        } finally {
+            world.setBlock(x, y, z, oldBlock, oldMeta, 3);
+            world.setBlock(x, y - 1, z, oldBelow, oldBelowMeta, 3);
+        }
     }
 
     private static void checkZaniteSwordAttributeMap() {

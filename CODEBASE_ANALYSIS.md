@@ -483,23 +483,17 @@ when there is no owner and handle it in `readSpawnData`. Consider using
 **Fix:** validate target before client calls and spawn data; persist `type` in
 NBT (`writeEntityToNBT`/`readEntityFromNBT`); make the enum lookup defensive.
 
-#### B21 — Skyroot bed spawn handling writes an Aether bed location from an overworld bed
+#### B21 — Skyroot bed spawn handling (reviewed; no bug found)
 
 **File:** `blocks/BlockSkyrootBed.java:95-106, 189-191`
 
-In `onBlockActivated` the `NOT_POSSIBLE_NOW` branch sets the player’s spawn
-chunk and `PlayerAether.bedLocation` whenever the player’s dimension is Aether
-**or 0**. In the overworld daytime case this can write an Aether bed location
-from an overworld bed. Guard that block with an explicit Aether-dimension check.
-
-The `isBedFoot` override returns `isBlockHeadOfBed(...)` despite its name. This
-matches the Forge `Block.isBedFoot` default in this environment, so it may be
-intentional compatibility behavior, but it looks inverted; if the intent is a
-true “foot” test, negate it:
-
-```java
-return !BlockSkyrootBed.isBlockHeadOfBed(world.getBlockMetadata(x, y, z));
-```
+The `NOT_POSSIBLE_NOW` branch already has an explicit inner
+`player.dimension == AetherConfig.getAetherDimensionID()` guard around the
+`setSpawnChunk`/`PlayerAether.setBedLocation` writes, so an overworld bed does
+not write an Aether spawn. The `isBedFoot` override matches the Forge
+`Block.isBedFoot` default in this environment; it was left unchanged. The
+earlier report entry was a false positive (see the correction note near the end
+of the document).
 
 #### B22 — Berry bush checks the wrong block for enchanted grass
 
@@ -1214,14 +1208,14 @@ mod. Neither test source set is included in the published mod jar.
 JaCoCo 0.8.16 is attached to the unit-test JVM and `check` now depends on
 `jacocoTestReport`.
 
-Current baseline from this workspace (21 tests, all passing):
+Current baseline from this workspace (23 tests, all passing):
 
 | Counter | Covered | Missed | Coverage |
 |---|---:|---:|---:|
-| LINE | 387 | 19,135 | 1.98% |
-| BRANCH | 73 | 9,228 | 0.79% |
-| METHOD | 96 | 2,573 | 3.60% |
-| CLASS | 24 | 379 | 5.96% |
+| LINE | 404 | 19,131 | 2.07% |
+| BRANCH | 77 | 9,248 | 0.83% |
+| METHOD | 102 | 2,567 | 3.82% |
+| CLASS | 26 | 377 | 6.45% |
 
 The low baseline is expected: the initial suite only covers pure utility/API
 code, while most of the mod needs the game. This is a regression baseline, not
@@ -1257,7 +1251,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 109/109 checks passed
+[AETHER-GAMETEST] 112/112 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1325,3 +1319,32 @@ Added game-test checks for MiniCloud spawn data, crystal NBT/spawn data, Moa egg
 fallbacks, invalid Moa ids, lore null handling, and the Zanite sword attribute
 map; added a unit test for crystal-type bounds. The baseline is now
 **109/109 in-game checks** and **21 unit tests**.
+
+
+### Fourth batch fix status
+
+- B14 — Swet jump packets are sent only on ground-state changes, and only to
+  nearby players, instead of broadcasting every tick.
+- B15 — non-friendly Swets can despawn again; zero-size loot stacks are
+  skipped; a captured Swet’s hitbox is restored after its prey leaves; invalid
+  Swet type ids fall back safely.
+- B22 — Berry bushes check the soil below them for the enchanted-grass bonus.
+- B24 — fixed the Valkyrie Queen’s always-true locked-stone condition, made
+  the peaceful dialogue branch reachable, and guarded the saved safe-position
+  list.
+- B27 — `MapGenSilverDungeon` reads the correct `xTendency` NBT tag.
+- B30 — the freezer checks the icestone block below it and fires its Forge hook
+  only on the server.
+- B31 — Aechor Plants and Cockatrices no longer spawn projectiles client-side.
+- B32 — parachute items are server-authoritative, with a null held-item guard.
+
+Added a Swet enum bounds unit test, a `PacketSwetJump` round-trip test, a
+game-test Swet despawn assertion, and a game-test freezer/icestone progress
+assertion. The baseline is now **112/112 in-game checks** and **23 unit tests**.
+
+### B21 correction
+
+The skyroot-bed spawn path already guards the respawn-point write with an
+explicit Aether-dimension check. The `isBedFoot` override matches the Forge
+default in this environment (`isBlockHeadOfBed`), so no behavior change was
+made; the earlier report entry was based on a false positive.
