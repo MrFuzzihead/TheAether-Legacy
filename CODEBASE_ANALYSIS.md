@@ -693,13 +693,11 @@ sentinel key or `""` for unknown items.
 
 `int size = meta == 0 ? 2 : 1;` treats the log block metadata as a species flag,
 but `BlockLog` metadata is the log axis/orientation (`0..3`). One quarter of
-logs in each orientation get double drops from a skyroot tool. Additionally,
-`getItemDropped` always returns `skyroot_log`, even for `golden_oak_log`; golden
-logs therefore generally drop skyroot logs unless the special harvest path is
-used.
+logs in each orientation get double drops from a skyroot tool.
 
-**Fix:** base double-drop on the block/item type, not on `meta`; return
-`golden_oak_log` for the golden block (with the intended special-case amber drop).
+**Fix:** base double-drop on the block type, not on `meta`. Golden oak logs keep
+their intended normal drop of skyroot logs; they only drop themselves through
+the silk-touch path, and still drop golden amber from a suitable axe.
 
 #### B35 — Player accessory renderer has state bugs
 
@@ -1357,8 +1355,9 @@ made; the earlier report entry was based on a false positive.
   colliding box; it no longer depends on list ordering.
 - B26 — Moa types are stored in a `LinkedHashMap`, giving stable persisted IDs
   in registration order.
-- B34 — skyroot/golden logs drop their own species, and skyroot double-drop
-  behavior is based on the block type instead of log rotation metadata.
+- B34 — skyroot double-drop behavior is based on the block type instead of log
+  rotation metadata. Golden oak logs still drop skyroot logs normally and only
+  drop themselves with silk touch.
 - B38 — the golden parachute config value is assigned to its own field instead
   of overwriting the Book of Lore field.
 - B39 — the `@Mod` version uses the generated `Tags.VERSION` token.
@@ -1366,5 +1365,5 @@ made; the earlier report entry was based on a false positive.
   language file.
 
 Added a language-key unit test, game-test assertions for Moa type order, log
-species drops, and generated mod version. The baseline is now **119/119 in-game
-checks** and **24 unit tests**.
+normal-drop species, and generated mod version. The baseline is now
+**119/119 in-game checks** and **24 unit tests**.

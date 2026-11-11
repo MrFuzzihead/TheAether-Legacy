@@ -379,9 +379,9 @@ public final class ServerGameTests {
             BlocksAether.skyroot_log.getItemDropped(0, world.rand, 0)
                 == Item.getItemFromBlock(BlocksAether.skyroot_log));
         check(
-            "golden oak logs drop golden oak logs",
+            "golden oak logs drop skyroot logs without silk touch",
             BlocksAether.golden_oak_log.getItemDropped(0, world.rand, 0)
-                == Item.getItemFromBlock(BlocksAether.golden_oak_log));
+                == Item.getItemFromBlock(BlocksAether.skyroot_log));
     }
 
     private static void checkGeneratedVersion() {

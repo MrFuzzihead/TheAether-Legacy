@@ -105,8 +105,9 @@ public class BlockAetherLog extends BlockLog {
 
     @Override
     public Item getItemDropped(int meta, Random random, int fortune) {
-        return Item.getItemFromBlock(
-            this == BlocksAether.golden_oak_log ? BlocksAether.golden_oak_log : BlocksAether.skyroot_log);
+        // Golden oak logs only drop themselves through the silk-touch path above;
+        // their normal drop is a skyroot log (plus golden amber from a suitable axe).
+        return Item.getItemFromBlock(BlocksAether.skyroot_log);
     }
 
     @Override
