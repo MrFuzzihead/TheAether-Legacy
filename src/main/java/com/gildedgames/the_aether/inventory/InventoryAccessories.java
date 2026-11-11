@@ -34,6 +34,7 @@ public class InventoryAccessories implements IAccessoryInventory {
         this.playerAether = playerAether;
     }
 
+    @Override
     public float getCurrentPlayerStrVsBlock(float original) {
         float f = original;
 

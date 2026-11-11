@@ -17,7 +17,6 @@ import net.minecraftforge.event.entity.player.PlayerEvent.Clone;
 
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.entities.util.EntityHook;
-import com.gildedgames.the_aether.inventory.InventoryAccessories;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.network.packets.PacketAccessory;
@@ -170,20 +169,21 @@ public class PlayerAetherEvents {
             if (playerAether.getAccessoryInventory()
                 .isWearingPhoenixSet() && event.source.isFireDamage()) {
                 event.setCanceled(true);
-            } else if (playerAether.getAbilities()
-                .get(3)
-                .shouldExecute()) {
-                    event.setCanceled(
-                        ((AbilityRepulsion) playerAether.getAbilities()
-                            .get(3)).onPlayerAttacked(event.source));
+            } else {
+                AbilityRepulsion repulsion = playerAether.getRepulsionAbility();
+
+                if (repulsion.shouldExecute()) {
+                    event.setCanceled(repulsion.onPlayerAttacked(event.source));
                 }
+            }
         }
     }
 
     @SubscribeEvent
     public void onUpdateBreakSpeed(BreakSpeed event) {
-        event.newSpeed = ((InventoryAccessories) PlayerAether.get(event.entityPlayer)
-            .getAccessoryInventory()).getCurrentPlayerStrVsBlock(event.newSpeed);
+        event.newSpeed = PlayerAether.get(event.entityPlayer)
+            .getAccessoryInventory()
+            .getCurrentPlayerStrVsBlock(event.newSpeed);
     }
 
     @SubscribeEvent

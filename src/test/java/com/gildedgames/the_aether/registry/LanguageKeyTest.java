@@ -15,8 +15,7 @@ import org.junit.Test;
 
 public class LanguageKeyTest {
 
-    @Test
-    public void halfSlabsUseTileLocalizationKeys() throws IOException {
+    private Set<String> loadKeys() throws IOException {
         InputStream stream = getClass().getResourceAsStream("/assets/aether_legacy/lang/en_US.lang");
         assertNotNull("en_US.lang must be on the test runtime classpath", stream);
 
@@ -35,11 +34,25 @@ public class LanguageKeyTest {
             reader.close();
         }
 
+        return keys;
+    }
+
+    @Test
+    public void halfSlabsUseTileLocalizationKeys() throws IOException {
+        Set<String> keys = loadKeys();
         String[] slabs = { "skyroot_slab", "carved_slab", "angelic_slab", "hellfire_slab", "holystone_slab",
             "mossy_holystone_slab", "holystone_brick_slab", "aerogel_slab" };
 
         for (String slab : slabs) {
             assertTrue("missing tile." + slab + ".name", keys.contains("tile." + slab + ".name"));
         }
+    }
+
+    @Test
+    public void sunAltarStringsAreLocalized() throws IOException {
+        Set<String> keys = loadKeys();
+
+        assertTrue("missing sun altar title", keys.contains("gui.sun_altar.title"));
+        assertTrue("missing sun altar time selector", keys.contains("gui.sun_altar.select_time"));
     }
 }

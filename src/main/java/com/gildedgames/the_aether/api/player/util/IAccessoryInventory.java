@@ -19,6 +19,8 @@ public interface IAccessoryInventory extends IInventory {
 
     public void damageWornStack(int damage, ItemStack stack);
 
+    public float getCurrentPlayerStrVsBlock(float original);
+
     public void setAccessorySlot(AccessoryType type, ItemStack stack);
 
     public ItemStack getStackInSlot(AccessoryType type);

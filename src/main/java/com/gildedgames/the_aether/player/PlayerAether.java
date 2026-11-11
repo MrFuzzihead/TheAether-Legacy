@@ -63,6 +63,8 @@ public class PlayerAether implements IPlayerAether {
 
     private final ArrayList<IAetherAbility> abilities = new ArrayList<IAetherAbility>();
 
+    private final AbilityRepulsion repulsionAbility;
+
     public final ArrayList<Entity> clouds = new ArrayList<Entity>(2);
 
     public int shardCount;
@@ -120,12 +122,13 @@ public class PlayerAether implements IPlayerAether {
         this.shouldRenderGlow = false;
         this.shouldRenderCape = true;
         this.shouldGetPortal = true;
+        this.repulsionAbility = new AbilityRepulsion(this);
         this.abilities.addAll(
             Arrays.<IAetherAbility>asList(
                 new AbilityAccessories(this),
                 new AbilityArmor(this),
                 new AbilityFlight(this),
-                new AbilityRepulsion(this)));
+                this.repulsionAbility));
     }
 
     public static PlayerAether get(EntityPlayer player) {
@@ -580,6 +583,10 @@ public class PlayerAether implements IPlayerAether {
     @Override
     public ArrayList<IAetherAbility> getAbilities() {
         return this.abilities;
+    }
+
+    public AbilityRepulsion getRepulsionAbility() {
+        return this.repulsionAbility;
     }
 
     @Override

@@ -1479,3 +1479,31 @@ Remaining medium/low items intentionally deferred:
   multiple inventory stacks, because that changes the entry-fee protocol and
   needs a gameplay decision.
 - B29 remains deferred as previously noted.
+
+### Refactor batch 1 status
+
+Completed refactors:
+
+- **Container block-break logic (item 2)** — `BlockEnchanter`, `BlockFreezer`
+  and `BlockIncubator` now share `BlockAetherContainer.dropContainerItems`
+  instead of carrying three copies of the item-spawning loop.
+- **Typed ability access (item 4)** — `PlayerAether` keeps a typed
+  `AbilityRepulsion` reference and exposes `getRepulsionAbility()`;
+  `PlayerAetherEvents` no longer reads `getAbilities().get(3)`. Break-speed
+  handling uses the `IAccessoryInventory` interface instead of casting to
+  `InventoryAccessories`.
+- **Recipe registration names (item 6)** — removed the unused `name` parameter
+  and all 82+7 passing name strings from `AetherRegistries` recipe helpers.
+- **Sun Altar localization (part of item 8)** — the title and time-selector
+  strings now use `I18n` and `en_US` keys.
+- **Optional Battlegear integration (item 9)** — the direct Battlegear class
+  reference moved out of `AetherItemRenderer` into
+  `compatibility/client/BattlegearRenderCompat`, loaded only when the
+  compatibility hook is actually invoked.
+
+Added unit coverage for container item dropping and Sun Altar localization
+keys. The baseline is now **125/125 in-game checks** and **48 unit tests**.
+
+Still open refactor items: unify the two dungeon base classes, share tile-entity
+progress/output logic, centralize item-drop policies, introduce a typed registry
+abstraction, finish GUI localization, and add the remaining pure-logic tests.
