@@ -37,7 +37,6 @@ public class EntityDartPoison extends EntityDartBase {
             }
         }
 
-        this.isDead = false;
     }
 
     @Override

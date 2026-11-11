@@ -11,6 +11,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.FurnaceRecipes;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
@@ -22,8 +23,13 @@ import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.entities.EntitiesAether;
 import com.gildedgames.the_aether.entities.effects.EffectInebriation;
 import com.gildedgames.the_aether.entities.effects.PotionInebriation;
+import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
+import com.gildedgames.the_aether.entities.projectile.crystals.EntityCrystal;
+import com.gildedgames.the_aether.entities.projectile.crystals.EnumCrystalType;
+import com.gildedgames.the_aether.items.ItemMoaEgg;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
+import com.gildedgames.the_aether.items.weapons.ItemZaniteSword;
 import com.gildedgames.the_aether.registry.AetherLore;
 import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
 import com.gildedgames.the_aether.world.AetherData;
@@ -32,6 +38,8 @@ import com.google.common.collect.Multimap;
 
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * In-game assertions for The Aether Legacy.
@@ -70,6 +78,10 @@ public final class ServerGameTests {
         checkRecipes();
         checkBlockPlacement();
         checkAetherTimeTick();
+        checkSpawnDataSafety();
+        checkCrystalSafety();
+        checkMoaAndLoreSafety();
+        checkZaniteSwordAttributeMap();
 
         return failures;
     }
@@ -253,6 +265,81 @@ public final class ServerGameTests {
             "skyroot log smelts to charcoal",
             FurnaceRecipes.smelting()
                 .getSmeltingResult(new ItemStack(BlocksAether.skyroot_log, 1, 1)) != null);
+    }
+
+    private static void checkSpawnDataSafety() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for spawn-data checks", false);
+            return;
+        }
+
+        EntityMiniCloud cloud = new EntityMiniCloud(world);
+        cloud.owner = null;
+
+        ByteBuf buffer = Unpooled.buffer();
+        cloud.writeSpawnData(buffer);
+
+        EntityMiniCloud decoded = new EntityMiniCloud(world);
+        decoded.readSpawnData(buffer);
+        check("mini cloud spawn data handles a missing owner", decoded.owner == null);
+        check("mini cloud spawn data is fully consumed", buffer.readableBytes() == 0);
+    }
+
+    private static void checkCrystalSafety() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for crystal checks", false);
+            return;
+        }
+
+        EntityCrystal crystal = new EntityCrystal(world, 0.0D, 100.0D, 0.0D, EnumCrystalType.CLOUD);
+        NBTTagCompound tag = new NBTTagCompound();
+        crystal.writeEntityToNBT(tag);
+
+        EntityCrystal loaded = new EntityCrystal(world);
+        loaded.readEntityFromNBT(tag);
+        check("crystal type survives NBT persistence", loaded.getCrystalType() == EnumCrystalType.CLOUD);
+
+        EntityCrystal thunder = new EntityCrystal(world, 0.0D, 100.0D, 0.0D, EnumCrystalType.THUNDER);
+        ByteBuf buffer = Unpooled.buffer();
+        thunder.writeSpawnData(buffer);
+
+        EntityCrystal decoded = new EntityCrystal(world);
+        decoded.readSpawnData(buffer);
+        check("thunder crystal spawn data handles a missing target", decoded.getAttackTarget() == null);
+    }
+
+    private static void checkMoaAndLoreSafety() {
+        ItemMoaEgg egg = (ItemMoaEgg) ItemsAether.moa_egg;
+        ItemStack noTag = new ItemStack(egg);
+
+        check("moa egg without NBT falls back to a valid type", egg.getMoaTypeFromItemStack(noTag) != null);
+
+        ItemStack invalidTag = new ItemStack(egg);
+        NBTTagCompound tag = new NBTTagCompound();
+        tag.setInteger("typeId", Integer.MAX_VALUE);
+        invalidTag.setTagCompound(tag);
+        check("moa egg with an invalid type id falls back", egg.getMoaTypeFromItemStack(invalidTag) != null);
+
+        check(
+            "invalid moa type ids return null",
+            AetherAPI.instance()
+                .getMoaType(-1) == null
+                && AetherAPI.instance()
+                    .getMoaType(
+                        AetherAPI.instance()
+                            .getMoaTypeSize())
+                    == null);
+
+        check("lore lookup handles a null stack", AetherLore.getLoreEntryKey(null) == null);
+    }
+
+    private static void checkZaniteSwordAttributeMap() {
+        ItemZaniteSword sword = (ItemZaniteSword) ItemsAether.zanite_sword;
+        check("zanite sword has a non-null attribute modifier map", sword.getItemAttributeModifiers() != null);
     }
 
     private static void checkAetherTimeTick() {

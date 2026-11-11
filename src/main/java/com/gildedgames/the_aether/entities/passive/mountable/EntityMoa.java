@@ -355,9 +355,14 @@ public class EntityMoa extends EntitySaddleMount {
 
         this.setPlayerGrown(nbt.getBoolean("playerGrown"));
         this.setRemainingJumps(nbt.getInteger("remainingJumps"));
-        this.setMoaType(
-            AetherAPI.instance()
-                .getMoaType(nbt.getInteger("moaTypeId")));
+
+        AetherMoaType moaType = AetherAPI.instance()
+            .getMoaType(nbt.getInteger("moaTypeId"));
+
+        if (moaType != null) {
+            this.setMoaType(moaType);
+        }
+
         this.setAmountFed(nbt.getByte("amountFed"));
         this.setHungry(nbt.getBoolean("isHungry"));
         this.setSitting(nbt.getBoolean("isSitting"));

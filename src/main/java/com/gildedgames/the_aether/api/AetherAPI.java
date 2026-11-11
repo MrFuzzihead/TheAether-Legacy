@@ -223,8 +223,9 @@ public class AetherAPI {
     }
 
     public AetherMoaType getMoaType(int id) {
-        return this.getMoaTypeValues()
-            .get(id);
+        List<AetherMoaType> values = this.getMoaTypeValues();
+
+        return id >= 0 && id < values.size() ? values.get(id) : null;
     }
 
     public AetherMoaType getRandomMoaType() {

@@ -20,7 +20,7 @@ public class SlotLore extends Slot {
         // (AetherLore.hasKey) that any player could flip for everyone.
         String key = AetherLore.getLoreEntryKey(stack);
 
-        return !StatCollector.translateToLocal(key)
+        return key != null && !StatCollector.translateToLocal(key)
             .contains("lore.");
     }
 }

@@ -32,8 +32,6 @@ public class EntityHammerProjectile extends EntityProjectileBase {
 
         if (this.ticksInAir > 100) {
             this.setDead();
-        } else {
-            this.ticksInAir++;
         }
     }
 
@@ -56,6 +54,8 @@ public class EntityHammerProjectile extends EntityProjectileBase {
             this.worldObj.spawnParticle("largesmoke", this.posX, this.posY, this.posZ, 0.0D, 0.0D, 0.0D);
             this.worldObj.spawnParticle("flame", this.posX, this.posY, this.posZ, 0.0D, 0.0D, 0.0D);
         }
+
+        this.setDead();
     }
 
     @Override

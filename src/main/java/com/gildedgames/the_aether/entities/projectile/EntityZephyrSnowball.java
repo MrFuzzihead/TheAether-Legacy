@@ -31,8 +31,6 @@ public class EntityZephyrSnowball extends EntityProjectileBase {
 
         if (this.ticksInAir > 150) {
             this.setDead();
-        } else {
-            this.ticksInAir++;
         }
     }
 
@@ -55,9 +53,9 @@ public class EntityZephyrSnowball extends EntityProjectileBase {
                 ((EntityPlayerMP) object.entityHit).playerNetServerHandler
                     .sendPacket(new S12PacketEntityVelocity(object.entityHit));
             }
-
-            this.setDead();
         }
+
+        this.setDead();
     }
 
     @Override

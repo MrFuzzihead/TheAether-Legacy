@@ -5,6 +5,7 @@ import net.minecraft.entity.EntityFlying;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.effect.EntityLightningBolt;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.ChatComponentText;
@@ -100,14 +101,15 @@ public class EntityCrystal extends EntityFlying implements IEntityAdditionalSpaw
         }
 
         if (this.type == EnumCrystalType.THUNDER) {
-            if (!this.worldObj.isRemote) {
-                if (this.getAttackTarget() == null || (this.getAttackTarget() != null && !this.getAttackTarget()
-                    .isEntityAlive())) {
+            EntityLivingBase target = this.getAttackTarget();
+
+            if (target == null || !target.isEntityAlive()) {
+                if (!this.worldObj.isRemote) {
                     this.setDead();
                 }
-
-                this.faceEntity(this.getAttackTarget(), 10F, 10F);
-                this.moveTowardsTarget(this.getAttackTarget(), 0.02D);
+            } else {
+                this.faceEntity(target, 10F, 10F);
+                this.moveTowardsTarget(target, 0.02D);
             }
         } else if (this.isCollided && !this.worldObj.isRemote) {
             if (this.wasHit()) {
@@ -356,9 +358,8 @@ public class EntityCrystal extends EntityFlying implements IEntityAdditionalSpaw
         buffer.writeInt(this.type.getId());
 
         if (this.type == EnumCrystalType.THUNDER) {
-            buffer.writeInt(
-                this.getAttackTarget()
-                    .getEntityId());
+            EntityLivingBase target = this.getAttackTarget();
+            buffer.writeInt(target == null ? -1 : target.getEntityId());
         }
     }
 
@@ -367,8 +368,21 @@ public class EntityCrystal extends EntityFlying implements IEntityAdditionalSpaw
         this.type = EnumCrystalType.get(buffer.readInt());
 
         if (this.type == EnumCrystalType.THUNDER) {
-            this.setAttackTarget((EntityLivingBase) this.worldObj.getEntityByID(buffer.readInt()));
+            int targetId = buffer.readInt();
+            this.setAttackTarget(targetId < 0 ? null : (EntityLivingBase) this.worldObj.getEntityByID(targetId));
         }
+    }
+
+    @Override
+    public void writeEntityToNBT(NBTTagCompound compound) {
+        super.writeEntityToNBT(compound);
+        compound.setByte("CrystalType", (byte) this.type.getId());
+    }
+
+    @Override
+    public void readEntityFromNBT(NBTTagCompound compound) {
+        super.readEntityFromNBT(compound);
+        this.type = EnumCrystalType.get(compound.getByte("CrystalType"));
     }
 
 }

@@ -50,6 +50,10 @@ public class EntityMiniCloud extends EntityFlying implements IEntityAdditionalSp
     }
 
     public void getTargetPos() {
+        if (this.owner == null) {
+            return;
+        }
+
         if (this.getDistanceToEntity(this.owner) > 2.0F) {
             this.targetX = this.owner.posX;
             this.targetY = this.owner.posY + 1.10000000149011612D;
@@ -82,6 +86,11 @@ public class EntityMiniCloud extends EntityFlying implements IEntityAdditionalSp
         double var3 = this.targetY - this.posY;
         double var5 = this.targetZ - this.posZ;
         double var7 = Math.sqrt(var1 * var1 + var3 * var3 + var5 * var5) * 3.25D;
+
+        if (var7 == 0.0D) {
+            return;
+        }
+
         this.motionX = (this.motionX + var1 / var7) / 2.0D;
         this.motionY = (this.motionY + var3 / var7) / 2.0D;
         this.motionZ = (this.motionZ + var5 / var7) / 2.0D;
@@ -114,8 +123,11 @@ public class EntityMiniCloud extends EntityFlying implements IEntityAdditionalSp
             this.spawnExplosionParticle();
             this.isDead = true;
         } else {
-            if (this.owner == null && !this.worldObj.isRemote) {
-                this.setDead();
+            if (this.owner == null) {
+                if (!this.worldObj.isRemote) {
+                    this.setDead();
+                }
+
                 return;
             }
 
@@ -198,13 +210,14 @@ public class EntityMiniCloud extends EntityFlying implements IEntityAdditionalSp
     @Override
     public void writeSpawnData(ByteBuf buffer) {
         buffer.writeBoolean(this.direction);
-        buffer.writeInt(this.owner.getEntityId());
+        buffer.writeInt(this.owner == null ? -1 : this.owner.getEntityId());
     }
 
     @Override
     public void readSpawnData(ByteBuf buffer) {
         this.direction = buffer.readBoolean();
-        this.owner = (EntityPlayer) this.worldObj.getEntityByID(buffer.readInt());
+        int ownerId = buffer.readInt();
+        this.owner = ownerId < 0 ? null : (EntityPlayer) this.worldObj.getEntityByID(ownerId);
     }
 
 }

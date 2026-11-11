@@ -1214,14 +1214,14 @@ mod. Neither test source set is included in the published mod jar.
 JaCoCo 0.8.16 is attached to the unit-test JVM and `check` now depends on
 `jacocoTestReport`.
 
-Current baseline from this workspace (20 tests, all passing):
+Current baseline from this workspace (21 tests, all passing):
 
 | Counter | Covered | Missed | Coverage |
 |---|---:|---:|---:|
-| LINE | 368 | 19,141 | 1.89% |
-| BRANCH | 70 | 9,193 | 0.76% |
-| METHOD | 92 | 2,575 | 3.45% |
-| CLASS | 23 | 380 | 5.71% |
+| LINE | 387 | 19,135 | 1.98% |
+| BRANCH | 73 | 9,228 | 0.79% |
+| METHOD | 96 | 2,573 | 3.60% |
+| CLASS | 24 | 379 | 5.96% |
 
 The low baseline is expected: the initial suite only covers pure utility/API
 code, while most of the mod needs the game. This is a regression baseline, not
@@ -1257,7 +1257,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 100/100 checks passed
+[AETHER-GAMETEST] 109/109 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1301,5 +1301,27 @@ now **100/100** after the second batch.
   skipped.
 
 Added game-test coverage for B09/B37 and unit coverage for the accessory drop
-and removal paths. The baseline is now **100/100 in-game checks** and **20 unit
-tests**.
+and removal paths. After the second batch the baseline was **100/100 in-game
+checks** and **20 unit tests**.
+
+
+### Third batch fix status
+
+- B16 — poison darts no longer clear `isDead` after a hit.
+- B17 — hammer projectiles die on impact and no longer double-count
+  `ticksInAir`.
+- B18 — Zephyr snowballs die on block/other impacts and no longer double-count
+  `ticksInAir`.
+- B19 — MiniCloud handles a missing owner in updates and spawn data.
+- B20 — crystal targets are null-safe, crystal type is persisted through NBT,
+  and `EnumCrystalType.get` is bounds-checked.
+- B33 — lore lookup handles null/unregistered stacks; the lore slot and GUI are
+  null-safe.
+- B42 — `ItemZaniteSword#getItemAttributeModifiers` no longer returns null.
+- B43 — Moa eggs without NBT or with invalid type ids fall back safely; Moa
+  type lookup is bounds-checked.
+
+Added game-test checks for MiniCloud spawn data, crystal NBT/spawn data, Moa egg
+fallbacks, invalid Moa ids, lore null handling, and the Zanite sword attribute
+map; added a unit test for crystal-type bounds. The baseline is now
+**109/109 in-game checks** and **21 unit tests**.

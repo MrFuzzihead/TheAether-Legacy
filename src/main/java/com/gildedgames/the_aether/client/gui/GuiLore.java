@@ -76,7 +76,8 @@ public class GuiLore extends GuiContainer {
                 || (searchedStack.getItem() != this.currentItem.getItem() || (!searchedStack.isItemStackDamageable()
                     && searchedStack.getItemDamage() != this.currentItem.getItemDamage()))) {
                 this.pageNumber = 0;
-                this.stringToLoad = I18n.format(AetherLore.getLoreEntryKey(searchedStack));
+                String loreKey = AetherLore.getLoreEntryKey(searchedStack);
+                this.stringToLoad = loreKey == null ? "" : I18n.format(loreKey);
                 this.currentItem = searchedStack;
             }
 
