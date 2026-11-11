@@ -8,10 +8,12 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ResourceLocation;
 
 import org.junit.Test;
 
@@ -161,6 +163,34 @@ public class AetherAPIRegistryTest {
         assertFalse(
             AetherAPI.instance()
                 .isFreezableFuel(stack));
+    }
+
+    @Test
+    public void damageableStacksIgnoreDamageInRegistryKey() {
+        Item item = mockItem();
+        ItemStack first = stack(item);
+        ItemStack second = stack(item);
+        when(first.isItemStackDamageable()).thenReturn(true);
+        when(second.isItemStackDamageable()).thenReturn(true);
+        when(second.getItemDamage()).thenReturn(10);
+
+        AetherAccessory accessory = new AetherAccessory(first, AccessoryType.RING);
+        AetherAPI.instance()
+            .register(accessory);
+
+        assertSame(
+            accessory,
+            AetherAPI.instance()
+                .getAccessory(second));
+    }
+
+    @Test
+    public void orderedRegistryPreservesRegistrationOrder() {
+        AetherRegistry<RegistryEntry> registry = new AetherRegistry<RegistryEntry>(true);
+        RegistryEntry first = registry.register(new ResourceLocation("aether_test:first"), new RegistryEntry());
+        RegistryEntry second = registry.register(new ResourceLocation("aether_test:second"), new RegistryEntry());
+
+        assertEquals(Arrays.asList(first, second), registry.values());
     }
 
     @Test

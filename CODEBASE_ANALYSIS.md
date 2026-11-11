@@ -1528,3 +1528,21 @@ Remaining refactor items: unify the two dungeon base classes, centralize item
 drop policies, introduce a typed registry abstraction, finish the remaining GUI
 localization (`AetherMainMenu`, dead `GuiAetherPerks`), and add the remaining
 pure-logic tests.
+
+### Refactor batch 3 status
+
+Completed refactors:
+
+- **Typed registry abstraction (item 7)** — added `AetherRegistry<T extends
+  RegistryEntry>`. `AetherAPI` now uses one typed registry for each content
+  type instead of six duplicated `HashMap`/`LinkedHashMap` blocks. Item-backed
+  keys are built in one place, and the Moa registry remains insertion-ordered
+  for stable persisted IDs.
+- **Registry coverage (item 10, partial)** — added tests for damageable-stack
+  key normalization and ordered registry iteration.
+
+The baseline is now **125/125 in-game checks** and **53 unit tests**.
+
+Remaining refactor items: unify the two dungeon base classes, centralize item
+drop policies, finish optional GUI localization (`AetherMainMenu`, dead
+`GuiAetherPerks`), and add the remaining pure-logic tests.
