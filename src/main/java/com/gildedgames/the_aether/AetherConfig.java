@@ -100,7 +100,7 @@ public class AetherConfig {
         book_of_lore = config
             .get("Misc", "Gives the Player a Book of Lore upon entering the Aether for the first time", true)
             .getBoolean(true);
-        book_of_lore = config
+        golden_parachute = config
             .get("Misc", "Gives the Player a Golden Parachute upon entering the Aether for the first time", true)
             .getBoolean(true);
 

@@ -2,6 +2,7 @@ package com.gildedgames.the_aether.api;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Random;
 
@@ -29,7 +30,7 @@ public class AetherAPI {
         4096);
     private static final HashMap<ResourceLocation, AetherFreezableFuel> iFreezableFuelRegistry = new HashMap<ResourceLocation, AetherFreezableFuel>(
         4096);
-    private static final HashMap<ResourceLocation, AetherMoaType> iMoaTypeRegistry = new HashMap<ResourceLocation, AetherMoaType>(
+    private static final LinkedHashMap<ResourceLocation, AetherMoaType> iMoaTypeRegistry = new LinkedHashMap<ResourceLocation, AetherMoaType>(
         4096);
 
     private static final AetherAPI instance = new AetherAPI();

@@ -16,6 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 
+import com.gildedgames.the_aether.Aether;
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.AetherEventHandler;
 import com.gildedgames.the_aether.api.AetherAPI;
@@ -27,6 +28,7 @@ import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
 import com.gildedgames.the_aether.entities.passive.mountable.EntitySwet;
 import com.gildedgames.the_aether.entities.projectile.crystals.EntityCrystal;
 import com.gildedgames.the_aether.entities.projectile.crystals.EnumCrystalType;
+import com.gildedgames.the_aether.entities.util.AetherMoaTypes;
 import com.gildedgames.the_aether.items.ItemMoaEgg;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
@@ -38,6 +40,7 @@ import com.gildedgames.the_aether.world.AetherData;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 import com.google.common.collect.Multimap;
 
+import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import io.netty.buffer.ByteBuf;
@@ -86,6 +89,9 @@ public final class ServerGameTests {
         checkZaniteSwordAttributeMap();
         checkSwetBehavior();
         checkFreezerBonus();
+        checkMoaTypeOrder();
+        checkLogDrops();
+        checkGeneratedVersion();
 
         return failures;
     }
@@ -339,6 +345,57 @@ public final class ServerGameTests {
                     == null);
 
         check("lore lookup handles a null stack", AetherLore.getLoreEntryKey(null) == null);
+    }
+
+    private static void checkMoaTypeOrder() {
+        check(
+            "moa type 0 is blue",
+            AetherAPI.instance()
+                .getMoaType(0) == AetherMoaTypes.blue);
+        check(
+            "moa type 1 is orange",
+            AetherAPI.instance()
+                .getMoaType(1) == AetherMoaTypes.orange);
+        check(
+            "moa type 2 is white",
+            AetherAPI.instance()
+                .getMoaType(2) == AetherMoaTypes.white);
+        check(
+            "moa type 3 is black",
+            AetherAPI.instance()
+                .getMoaType(3) == AetherMoaTypes.black);
+    }
+
+    private static void checkLogDrops() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for log drop checks", false);
+            return;
+        }
+
+        check(
+            "skyroot logs drop skyroot logs",
+            BlocksAether.skyroot_log.getItemDropped(0, world.rand, 0)
+                == Item.getItemFromBlock(BlocksAether.skyroot_log));
+        check(
+            "golden oak logs drop golden oak logs",
+            BlocksAether.golden_oak_log.getItemDropped(0, world.rand, 0)
+                == Item.getItemFromBlock(BlocksAether.golden_oak_log));
+    }
+
+    private static void checkGeneratedVersion() {
+        try {
+            String declared = Aether.class.getAnnotation(Mod.class)
+                .version();
+            String generated = (String) Class.forName("com.gildedgames.the_aether.Tags")
+                .getField("VERSION")
+                .get(null);
+
+            check("mod annotation uses the generated version", generated.equals(declared));
+        } catch (Throwable throwable) {
+            check("mod annotation uses the generated version: " + throwable, false);
+        }
     }
 
     private static void checkSwetBehavior() {

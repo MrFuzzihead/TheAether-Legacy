@@ -39,7 +39,7 @@ public class BlockAetherLog extends BlockLog {
         player.addStat(StatList.mineBlockStatArray[getIdFromBlock(this)], 1);
         player.addExhaustion(0.025F);
 
-        int size = meta == 0 ? 2 : 1;
+        int size = this == BlocksAether.skyroot_log ? 2 : 1;
 
         ItemStack stack = player.getCurrentEquippedItem();
 
@@ -105,7 +105,8 @@ public class BlockAetherLog extends BlockLog {
 
     @Override
     public Item getItemDropped(int meta, Random random, int fortune) {
-        return Item.getItemFromBlock(BlocksAether.skyroot_log);
+        return Item.getItemFromBlock(
+            this == BlocksAether.golden_oak_log ? BlocksAether.golden_oak_log : BlocksAether.skyroot_log);
     }
 
     @Override

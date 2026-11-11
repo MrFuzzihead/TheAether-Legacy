@@ -1208,11 +1208,11 @@ mod. Neither test source set is included in the published mod jar.
 JaCoCo 0.8.16 is attached to the unit-test JVM and `check` now depends on
 `jacocoTestReport`.
 
-Current baseline from this workspace (23 tests, all passing):
+Current baseline from this workspace (24 tests, all passing):
 
 | Counter | Covered | Missed | Coverage |
 |---|---:|---:|---:|
-| LINE | 404 | 19,131 | 2.07% |
+| LINE | 404 | 19,132 | 2.07% |
 | BRANCH | 77 | 9,248 | 0.83% |
 | METHOD | 102 | 2,567 | 3.82% |
 | CLASS | 26 | 377 | 6.45% |
@@ -1251,7 +1251,7 @@ a target. Reports are written to:
 Current result:
 
 ```text
-[AETHER-GAMETEST] 112/112 checks passed
+[AETHER-GAMETEST] 119/119 checks passed
 AETHER_GAMETEST_OK
 BUILD SUCCESSFUL
 ```
@@ -1340,7 +1340,8 @@ map; added a unit test for crystal-type bounds. The baseline is now
 
 Added a Swet enum bounds unit test, a `PacketSwetJump` round-trip test, a
 game-test Swet despawn assertion, and a game-test freezer/icestone progress
-assertion. The baseline is now **112/112 in-game checks** and **23 unit tests**.
+assertion. After the fourth batch the baseline was **112/112 in-game checks**
+and **23 unit tests**.
 
 ### B21 correction
 
@@ -1348,3 +1349,22 @@ The skyroot-bed spawn path already guards the respawn-point write with an
 explicit Aether-dimension check. The `isBedFoot` override matches the Forge
 default in this environment (`isBlockHeadOfBed`), so no behavior change was
 made; the earlier report entry was based on a false positive.
+
+
+### Fifth batch fix status
+
+- B25 — parachute collision now ignores the rider box and checks every
+  colliding box; it no longer depends on list ordering.
+- B26 — Moa types are stored in a `LinkedHashMap`, giving stable persisted IDs
+  in registration order.
+- B34 — skyroot/golden logs drop their own species, and skyroot double-drop
+  behavior is based on the block type instead of log rotation metadata.
+- B38 — the golden parachute config value is assigned to its own field instead
+  of overwriting the Book of Lore field.
+- B39 — the `@Mod` version uses the generated `Tags.VERSION` token.
+- B40 — all half-slab localization keys use the required `tile.` prefix in every
+  language file.
+
+Added a language-key unit test, game-test assertions for Moa type order, log
+species drops, and generated mod version. The baseline is now **119/119 in-game
+checks** and **24 unit tests**.
