@@ -61,13 +61,13 @@ public class GuiLore extends GuiContainer {
     @Override
     @SuppressWarnings("unchecked")
     protected void drawGuiContainerForegroundLayer(int par1, int par2) {
-        this.fontRendererObj.drawString("Prev.", 16, 160, 4210752);
-        this.fontRendererObj.drawString("Next", 218, 160, 4210752);
+        this.fontRendererObj.drawString(I18n.format("gui.lore.previous"), 16, 160, 4210752);
+        this.fontRendererObj.drawString(I18n.format("gui.lore.next"), 218, 160, 4210752);
 
-        this.fontRendererObj.drawString("Book", 32, -5, 4210752);
-        this.fontRendererObj.drawString("of Lore:", 24, 4, 4210752);
+        this.fontRendererObj.drawString(I18n.format("gui.lore.book"), 32, -5, 4210752);
+        this.fontRendererObj.drawString(I18n.format("gui.lore.of_lore"), 24, 4, 4210752);
 
-        this.fontRendererObj.drawString("Item :", 75, 0, 4210752);
+        this.fontRendererObj.drawString(I18n.format("gui.lore.item"), 75, 0, 4210752);
 
         ItemStack searchedStack = ((ContainerLore) this.inventorySlots).loreSlot.getStackInSlot(0);
 

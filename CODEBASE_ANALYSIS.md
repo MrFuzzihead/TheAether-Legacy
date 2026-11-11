@@ -1507,3 +1507,24 @@ keys. The baseline is now **125/125 in-game checks** and **48 unit tests**.
 Still open refactor items: unify the two dungeon base classes, share tile-entity
 progress/output logic, centralize item-drop policies, introduce a typed registry
 abstraction, finish GUI localization, and add the remaining pure-logic tests.
+
+### Refactor batch 2 status
+
+Completed refactors:
+
+- **Shared tile-entity processor base (item 3)** — added
+  `TileEntityAetherProcessor<T>`. `TileEntityEnchanter` and
+  `TileEntityFreezer` now only provide recipe/fuel/block/hook implementations;
+  progress, power, output merging, container-item handling, NBT and sided
+  inventory access live in the shared base.
+- **More GUI localization (item 8)** — the active Lore GUI strings (`Prev.`,
+  `Next`, `Book`, `of Lore:`, `Item :`) now use `I18n` keys, in addition to the
+  Sun Altar strings localized in the previous batch.
+
+Added unit coverage for the shared processor loop. The baseline is now
+**125/125 in-game checks** and **51 unit tests**.
+
+Remaining refactor items: unify the two dungeon base classes, centralize item
+drop policies, introduce a typed registry abstraction, finish the remaining GUI
+localization (`AetherMainMenu`, dead `GuiAetherPerks`), and add the remaining
+pure-logic tests.

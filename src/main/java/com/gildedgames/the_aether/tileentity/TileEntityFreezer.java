@@ -1,201 +1,92 @@
 package com.gildedgames.the_aether.tileentity;
 
-import java.util.List;
-import java.util.Map;
-
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 
 import com.gildedgames.the_aether.api.AetherAPI;
 import com.gildedgames.the_aether.api.events.AetherHooks;
 import com.gildedgames.the_aether.api.freezables.AetherFreezable;
 import com.gildedgames.the_aether.blocks.BlocksAether;
-import com.gildedgames.the_aether.blocks.container.BlockAetherContainer;
-import com.gildedgames.the_aether.tileentity.util.AetherTileEntity;
-import com.gildedgames.the_aether.util.FilledList;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-public class TileEntityFreezer extends AetherTileEntity {
-
-    public int progress, ticksRequired, powerRemaining;
-
-    private final FilledList<ItemStack> frozenItemStacks = new FilledList<ItemStack>(3, null);
-
-    private AetherFreezable currentFreezable;
+public class TileEntityFreezer extends TileEntityAetherProcessor<AetherFreezable> {
 
     public TileEntityFreezer() {
         super("Freezer");
     }
 
     @Override
-    public List<ItemStack> getTileInventory() {
-        return this.frozenItemStacks;
+    protected AetherFreezable getRecipe(ItemStack stack) {
+        return AetherAPI.instance()
+            .getFreezable(stack);
     }
 
     @Override
-    public void onSlotChanged(int index) {
-
+    protected ItemStack getRecipeOutput(AetherFreezable recipe) {
+        return recipe.getOutput();
     }
 
     @Override
-    public void updateEntity() {
-        boolean flag = this.isFreezing();
-
-        if (this.powerRemaining > 0) {
-            this.powerRemaining--;
-
-            if (this.currentFreezable != null) {
-                if (this.worldObj.getBlock(this.xCoord, this.yCoord - 1, this.zCoord) == BlocksAether.icestone) {
-                    this.progress += 2;
-                } else {
-                    this.progress++;
-                }
-            }
-        }
-
-        if (this.currentFreezable != null) {
-            if (this.progress >= this.currentFreezable.getTimeRequired()) {
-                if (!this.worldObj.isRemote) {
-                    ItemStack result = this.currentFreezable.getOutput()
-                        .copy();
-
-                    EnchantmentHelper
-                        .setEnchantments(EnchantmentHelper.getEnchantments(this.getStackInSlot(0)), result);
-
-                    if (this.getStackInSlot(0)
-                        .hasTagCompound()) {
-                        result.setTagCompound(
-                            this.getStackInSlot(0)
-                                .getTagCompound());
-                    }
-
-                    if (this.getStackInSlot(2) != null && this.getStackInSlot(2)
-                        .isStackable()) {
-                        ItemStack merged = this.getStackInSlot(2)
-                            .copy();
-
-                        merged.stackSize += result.stackSize;
-
-                        this.setInventorySlotContents(2, merged);
-                    } else {
-                        this.setInventorySlotContents(2, result);
-                    }
-
-                    if (this.getStackInSlot(0)
-                        .getItem()
-                        .hasContainerItem(this.getStackInSlot(0))) {
-                        this.setInventorySlotContents(
-                            0,
-                            this.getStackInSlot(0)
-                                .getItem()
-                                .getContainerItem(this.getStackInSlot(0)));
-                    } else {
-                        this.decrStackSize(0, 1);
-                    }
-
-                    AetherHooks.onItemFreeze(this, this.currentFreezable);
-                }
-
-                this.progress = 0;
-            }
-
-            if (this.getStackInSlot(0) == null || (this.getStackInSlot(0) != null && AetherAPI.instance()
-                .getFreezable(this.getStackInSlot(0)) != this.currentFreezable)) {
-                this.currentFreezable = null;
-                this.progress = 0;
-            }
-
-            if (this.powerRemaining <= 0) {
-                if (this.getStackInSlot(1) != null && AetherAPI.instance()
-                    .isFreezableFuel(this.getStackInSlot(1))) {
-                    this.powerRemaining += AetherAPI.instance()
-                        .getFreezableFuel(this.getStackInSlot(1))
-                        .getTimeGiven();
-
-                    if (!this.worldObj.isRemote) {
-                        this.decrStackSize(1, 1);
-                    }
-                } else {
-                    this.currentFreezable = null;
-                    this.progress = 0;
-                }
-            }
-        } else if (this.getStackInSlot(0) != null) {
-            ItemStack itemstack = this.getStackInSlot(0);
-            AetherFreezable freezable = AetherAPI.instance()
-                .getFreezable(itemstack);
-
-            if (freezable != null) {
-                ItemStack currentOutput = this.getStackInSlot(2);
-
-                if (currentOutput == null || (freezable.getOutput()
-                    .getItem() == currentOutput.getItem()
-                    && freezable.getOutput()
-                        .getItemDamage() == currentOutput.getItemDamage()
-                    && currentOutput.isStackable()
-                    && currentOutput.stackSize + freezable.getOutput().stackSize <= freezable.getOutput()
-                        .getMaxStackSize())) {
-                    this.currentFreezable = freezable;
-                    this.ticksRequired = this.currentFreezable.getTimeRequired();
-                    this.addEnchantmentWeight(itemstack);
-                    this.ticksRequired = AetherHooks
-                        .onSetFreezableTime(this, this.currentFreezable, this.ticksRequired);
-                }
-            }
-        }
-
-        if (flag != this.isFreezing()) {
-            this.markDirty();
-            BlockAetherContainer.setState(this.worldObj, this.xCoord, this.yCoord, this.zCoord, this.isFreezing());
-        }
+    protected int getRecipeTime(AetherFreezable recipe) {
+        return recipe.getTimeRequired();
     }
 
-    public void addEnchantmentWeight(ItemStack stack) {
-        Map<Integer, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
-
-        if (!enchantments.isEmpty()) {
-            for (int levels : enchantments.values()) {
-                this.ticksRequired += (levels * 1250);
-            }
-        }
+    @Override
+    protected int getRequiredProgress(AetherFreezable recipe) {
+        return this.getRecipeTime(recipe);
     }
 
-    @SideOnly(Side.CLIENT)
-    public int getFreezingProgressScaled(int i) {
-        if (this.ticksRequired == 0) {
-            return 0;
-        }
-        return (this.progress * i) / this.ticksRequired;
+    @Override
+    protected boolean isFuel(ItemStack stack) {
+        return AetherAPI.instance()
+            .isFreezableFuel(stack);
     }
 
-    @SideOnly(Side.CLIENT)
-    public int getFreezingTimeRemaining(int i) {
-        return (this.powerRemaining * i) / 500;
+    @Override
+    protected int getFuelTime(ItemStack stack) {
+        return AetherAPI.instance()
+            .getFreezableFuel(stack)
+            .getTimeGiven();
     }
 
-    public boolean isFreezing() {
+    @Override
+    protected boolean hasBonusBlock() {
+        return this.worldObj.getBlock(this.xCoord, this.yCoord - 1, this.zCoord) == BlocksAether.icestone;
+    }
+
+    @Override
+    protected int getBonusProgress() {
+        return 2;
+    }
+
+    @Override
+    protected int onSetTime(AetherFreezable recipe, int time) {
+        return AetherHooks.onSetFreezableTime(this, recipe, time);
+    }
+
+    @Override
+    protected void onProcessed(AetherFreezable recipe) {
+        AetherHooks.onItemFreeze(this, recipe);
+    }
+
+    @Override
+    public boolean isActive() {
         return this.powerRemaining > 0;
     }
 
-    @Override
-    public void readFromNBT(NBTTagCompound compound) {
-        super.readFromNBT(compound);
-
-        this.progress = compound.getInteger("progress");
-        this.powerRemaining = compound.getInteger("powerRemaining");
-        this.ticksRequired = compound.getInteger("ticksRequired");
+    @SideOnly(Side.CLIENT)
+    public int getFreezingProgressScaled(int scale) {
+        return this.getProgressScaled(scale);
     }
 
-    @Override
-    public void writeToNBT(NBTTagCompound compound) {
-        super.writeToNBT(compound);
+    @SideOnly(Side.CLIENT)
+    public int getFreezingTimeRemaining(int scale) {
+        return this.getTimeRemainingScaled(scale);
+    }
 
-        compound.setInteger("progress", this.progress);
-        compound.setInteger("powerRemaining", this.powerRemaining);
-        compound.setInteger("ticksRequired", this.ticksRequired);
+    public boolean isFreezing() {
+        return this.isActive();
     }
 
     @Override
@@ -212,10 +103,4 @@ public class TileEntityFreezer extends AetherTileEntity {
 
         return false;
     }
-
-    @Override
-    public int[] getAccessibleSlotsFromSide(int side) {
-        return side == 0 ? new int[] { 2 } : new int[] { 0, 1 };
-    }
-
 }

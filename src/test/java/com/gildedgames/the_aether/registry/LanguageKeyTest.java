@@ -55,4 +55,16 @@ public class LanguageKeyTest {
         assertTrue("missing sun altar title", keys.contains("gui.sun_altar.title"));
         assertTrue("missing sun altar time selector", keys.contains("gui.sun_altar.select_time"));
     }
+
+    @Test
+    public void loreGuiStringsAreLocalized() throws IOException {
+        Set<String> keys = loadKeys();
+
+        String[] loreKeys = { "gui.lore.previous", "gui.lore.next", "gui.lore.book", "gui.lore.of_lore",
+            "gui.lore.item" };
+
+        for (String key : loreKeys) {
+            assertTrue("missing " + key, keys.contains(key));
+        }
+    }
 }
