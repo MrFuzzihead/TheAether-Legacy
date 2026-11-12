@@ -1719,7 +1719,7 @@ Status key:
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
-| R11 | Feature gaps | Decision | OreDictionary done; localization next, then config validation | Which features are in scope? |
+| R11 | Feature gaps | Decision | OreDictionary + localization done; config validation next | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
 
@@ -1925,7 +1925,7 @@ scope is:
 | Config validation | IDs and spawn rates are loaded without validation | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
-| Localization beyond `en_US` | Every non-English file is missing the same 9 keys | Low | Low |
+| Localization beyond `en_US` | Done: all language files share the `en_US` key set | Low | Low |
 | More tests / CI | Unit tests, game tests, and CI already exist | Ongoing | Low |
 
 #### OreDictionary coverage
@@ -2014,21 +2014,15 @@ in NBT. This is the riskiest gameplay refactor and needs extensive in-game tests
 
 #### Localization beyond `en_US`
 
-Every non-English language file is missing the same nine keys:
+**Status:** completed.
 
-- `gui.aether_menu.info`
-- `gui.aether_menu.mods`
-- `gui.lore.book`
-- `gui.lore.item`
-- `gui.lore.next`
-- `gui.lore.of_lore`
-- `gui.lore.previous`
-- `gui.sun_altar.select_time`
-- `gui.sun_altar.title`
+All non-English language files were missing the same nine menu, lore, and Sun
+Altar keys. Those keys now exist in every language file using English fallback
+text, so no raw localization keys can appear.
 
-Minecraft normally falls back to English, so this is not a crash. Add a
-key-parity test and fill the missing entries. If real translations are
-unavailable, use English fallback text and mark them for later translation.
+Added `LanguageKeyTest.allLanguageFilesHaveTheSameKeys`, which compares every
+language file's key set against `en_US`. Translation quality can still be
+improved separately, but key coverage is now complete.
 
 #### Tests and CI
 
@@ -2042,14 +2036,13 @@ game-test, and release workflows. The remaining work is feature-specific coverag
 
 #### Recommended order
 
-1. Localization key parity - mechanical and quick.
-2. Config validation - prevents crashes and is testable.
-3. Optional NEI handlers - compatibility work with more setup.
-4. Loot table extraction/refactor - fix behavior first, then data-drive it.
-5. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+1. Config validation - prevents crashes and is testable.
+2. Optional NEI handlers - compatibility work with more setup.
+3. Loot table extraction/refactor - fix behavior first, then data-drive it.
+4. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
 
-OreDictionary coverage is complete. Start with the missing localization keys,
-then move to config validation.
+OreDictionary coverage and localization key parity are complete. Config
+validation is the next recommended task.
 
 **Decision needed:** which of these are in scope for this project cycle?
 

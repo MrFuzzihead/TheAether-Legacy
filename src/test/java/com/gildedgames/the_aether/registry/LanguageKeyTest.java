@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.registry;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -15,9 +16,17 @@ import org.junit.Test;
 
 public class LanguageKeyTest {
 
+    private static final String[] LANGUAGES = { "en_US", "de_DE", "es_MX", "fr_FR", "it_IT", "ja_JP", "ko_KR", "nl_NL",
+        "pl_PL", "ro_RO", "ru_RU", "sv_SE", "th_TH", "uk_UA", "zh_CN", "zh_TW" };
+
     private Set<String> loadKeys() throws IOException {
-        InputStream stream = getClass().getResourceAsStream("/assets/aether_legacy/lang/en_US.lang");
-        assertNotNull("en_US.lang must be on the test runtime classpath", stream);
+        return this.loadKeys("en_US");
+    }
+
+    private Set<String> loadKeys(String language) throws IOException {
+        String path = "/assets/aether_legacy/lang/" + language + ".lang";
+        InputStream stream = getClass().getResourceAsStream(path);
+        assertNotNull(language + ".lang must be on the test runtime classpath", stream);
 
         Set<String> keys = new HashSet<String>();
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
@@ -35,6 +44,15 @@ public class LanguageKeyTest {
         }
 
         return keys;
+    }
+
+    @Test
+    public void allLanguageFilesHaveTheSameKeys() throws IOException {
+        Set<String> expected = this.loadKeys("en_US");
+
+        for (String language : LANGUAGES) {
+            assertEquals("localization keys differ for " + language, expected, this.loadKeys(language));
+        }
     }
 
     @Test
