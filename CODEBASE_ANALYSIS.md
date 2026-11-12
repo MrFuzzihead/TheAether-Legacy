@@ -1719,7 +1719,7 @@ Status key:
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
-| R11 | Feature gaps | Decision | Start with OreDictionary + localization, then config validation | Which features are in scope? |
+| R11 | Feature gaps | Decision | OreDictionary done; localization next, then config validation | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
 
@@ -1920,7 +1920,7 @@ scope is:
 
 | Item | Current state | Effort | Risk |
 |---|---|---:|---:|
-| OreDictionary coverage | Only `stickWood` is registered | Low | Low |
+| OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
 | Optional NEI handlers | No NEI integration beyond the runtime dependency | Medium | Low-medium |
 | Config validation | IDs and spawn rates are loaded without validation | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
@@ -1930,20 +1930,20 @@ scope is:
 
 #### OreDictionary coverage
 
-Currently only `stickWood` is registered for `ItemsAether.skyroot_stick`.
+**Status:** completed.
 
-Add compatibility tags for:
+Registered compatibility tags:
 
 - `logWood` - skyroot and golden oak logs, using metadata wildcards.
 - `plankWood` - skyroot planks.
-- `stickWood` - already present.
+- `stickWood` - skyroot stick.
 - `treeSapling` - skyroot and golden oak saplings.
-- `treeLeaves` - Aether leaves.
-- Possibly `oreAmbrosium`, `oreZanite`, `oreGravitite`.
-- Possibly `gemAmbrosium`, `gemZanite`, `gemGravitite`.
+- `treeLeaves` - all Aether leaf blocks, using metadata wildcards.
+- `oreAmbrosium`, `oreZanite`, `oreGravitite`.
+- `gemAmbrosium`, `gemZanite`.
+- `blockZanite`.
 
-This is the smallest, highest-value compatibility task. Add a game-test check
-that each expected tag contains the expected item.
+Game-test coverage now verifies that each tag contains the expected item.
 
 #### Optional NEI handlers
 
@@ -2042,14 +2042,13 @@ game-test, and release workflows. The remaining work is feature-specific coverag
 
 #### Recommended order
 
-1. OreDictionary integration - small, useful, low risk.
-2. Localization key parity - mechanical and quick.
-3. Config validation - prevents crashes and is testable.
-4. Optional NEI handlers - compatibility work with more setup.
-5. Loot table extraction/refactor - fix behavior first, then data-drive it.
-6. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+1. Localization key parity - mechanical and quick.
+2. Config validation - prevents crashes and is testable.
+3. Optional NEI handlers - compatibility work with more setup.
+4. Loot table extraction/refactor - fix behavior first, then data-drive it.
+5. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
 
-Start with OreDictionary plus the missing localization keys as one small batch,
+OreDictionary coverage is complete. Start with the missing localization keys,
 then move to config validation.
 
 **Decision needed:** which of these are in scope for this project cycle?

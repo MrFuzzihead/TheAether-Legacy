@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.registry;
 
+import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -347,6 +348,27 @@ public class AetherRegistries {
             .func_151394_a(new ItemStack(BlocksAether.golden_oak_log, 1, 1), new ItemStack(Items.coal, 1, 1), 0.15F);
 
         OreDictionary.registerOre("stickWood", ItemsAether.skyroot_stick);
+
+        OreDictionary.registerOre("logWood", new ItemStack(BlocksAether.skyroot_log, 1, OreDictionary.WILDCARD_VALUE));
+        OreDictionary
+            .registerOre("logWood", new ItemStack(BlocksAether.golden_oak_log, 1, OreDictionary.WILDCARD_VALUE));
+        OreDictionary.registerOre("plankWood", BlocksAether.skyroot_planks);
+        OreDictionary.registerOre("treeSapling", BlocksAether.skyroot_sapling);
+        OreDictionary.registerOre("treeSapling", BlocksAether.golden_oak_sapling);
+
+        Block[] leaves = { BlocksAether.skyroot_leaves, BlocksAether.golden_oak_leaves, BlocksAether.crystal_leaves,
+            BlocksAether.crystal_fruit_leaves, BlocksAether.holiday_leaves, BlocksAether.decorated_holiday_leaves };
+
+        for (Block leaf : leaves) {
+            OreDictionary.registerOre("treeLeaves", new ItemStack(leaf, 1, OreDictionary.WILDCARD_VALUE));
+        }
+
+        OreDictionary.registerOre("oreAmbrosium", BlocksAether.ambrosium_ore);
+        OreDictionary.registerOre("oreZanite", BlocksAether.zanite_ore);
+        OreDictionary.registerOre("oreGravitite", BlocksAether.gravitite_ore);
+        OreDictionary.registerOre("gemAmbrosium", ItemsAether.ambrosium_shard);
+        OreDictionary.registerOre("gemZanite", ItemsAether.zanite_gemstone);
+        OreDictionary.registerOre("blockZanite", BlocksAether.zanite_block);
     }
 
     private static void initializeShapelessRecipes() {

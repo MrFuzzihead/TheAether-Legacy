@@ -17,6 +17,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
+import net.minecraftforge.oredict.OreDictionary;
 
 import com.gildedgames.the_aether.Aether;
 import com.gildedgames.the_aether.AetherConfig;
@@ -91,6 +92,7 @@ public final class ServerGameTests {
         checkLeafDrops();
         checkLoreLookup();
         checkRecipes();
+        checkOreDictionary();
         checkBlockPlacement();
         checkIcestoneConversion();
         checkAetherTimeTick();
@@ -324,6 +326,36 @@ public final class ServerGameTests {
             "skyroot log smelts to charcoal",
             FurnaceRecipes.smelting()
                 .getSmeltingResult(new ItemStack(BlocksAether.skyroot_log, 1, 1)) != null);
+    }
+
+    private static void checkOreDictionary() {
+        checkOre("stickWood", new ItemStack(ItemsAether.skyroot_stick));
+        checkOre("logWood", new ItemStack(BlocksAether.skyroot_log, 1, OreDictionary.WILDCARD_VALUE));
+        checkOre("logWood", new ItemStack(BlocksAether.golden_oak_log, 1, OreDictionary.WILDCARD_VALUE));
+        checkOre("plankWood", new ItemStack(BlocksAether.skyroot_planks));
+        checkOre("treeSapling", new ItemStack(BlocksAether.skyroot_sapling));
+        checkOre("treeSapling", new ItemStack(BlocksAether.golden_oak_sapling));
+        checkOre("treeLeaves", new ItemStack(BlocksAether.skyroot_leaves, 1, OreDictionary.WILDCARD_VALUE));
+        checkOre("treeLeaves", new ItemStack(BlocksAether.golden_oak_leaves, 1, OreDictionary.WILDCARD_VALUE));
+        checkOre("oreAmbrosium", new ItemStack(BlocksAether.ambrosium_ore));
+        checkOre("oreZanite", new ItemStack(BlocksAether.zanite_ore));
+        checkOre("oreGravitite", new ItemStack(BlocksAether.gravitite_ore));
+        checkOre("gemAmbrosium", new ItemStack(ItemsAether.ambrosium_shard));
+        checkOre("gemZanite", new ItemStack(ItemsAether.zanite_gemstone));
+        checkOre("blockZanite", new ItemStack(BlocksAether.zanite_block));
+    }
+
+    private static void checkOre(String oreName, ItemStack expected) {
+        boolean found = false;
+
+        for (ItemStack stack : OreDictionary.getOres(oreName)) {
+            if (OreDictionary.itemMatches(stack, expected, false)) {
+                found = true;
+                break;
+            }
+        }
+
+        check("ore dictionary " + oreName + " contains " + expected.getItem(), found);
     }
 
     private static void checkSpawnDataSafety() {
