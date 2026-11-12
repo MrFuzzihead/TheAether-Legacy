@@ -1709,7 +1709,7 @@ Status key:
 | ID | Item | Status | Recommendation | Main decision |
 |---|---|---|---|---|
 | R01 | B29 dungeon oak / golden-island vegetation | Done | Golden oaks restored; default trees suppressed; dead lake code removed | None |
-| R02 | Floating-island tautologies | Decision | Add early-exit optimization now; decide shape separately | Is the current shape intentional? |
+| R02 | Floating-island tautologies | Done | Early exit added; canopy shape unchanged | None |
 | R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
 | R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
 | R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
@@ -1740,23 +1740,20 @@ retained for them.
 
 ### R02 - `AetherGenFloatingIsland` tautologies and scan cost
 
-**Current state:** conditions such as `if (z != 0 || z != 1)` always evaluate
-true. The generator also scans roughly 7,400 blocks and continues scanning after
-the first non-air block is found.
+**Status:** completed as a behavior-preserving optimization.
 
-**Options:**
+`AetherGenFloatingIsland.generate` now checks the height limit before scanning
+and returns immediately on the first non-air block. The 18x23x18 scan and the
+existing full-row/column canopy shape are unchanged.
 
-1. Change `||` to `&&` to skip the intended offsets.
-2. Replace the conditions with explicit offset sets or a small shape table.
-3. Leave the generated shape alone and add an early exit when the first non-air
-   block is found.
+The generator's tautological conditions remain because they define the current
+visual shape. Changing them is a separate worldgen/design decision rather than a
+safe cleanup.
 
-**Recommendation:** apply option 3 now. It is behavior-preserving and removes
-most of the cost when an island cannot generate. Decide the intended island
-shape before changing the tautologies.
+Added unit tests cover the early exit and the height-limit short circuit.
 
-**Decision needed:** is the current full-row/column placement intentional, or
-were specific offsets meant to be excluded?
+**Decision needed:** none for the optimization. If the canopy shape is ever
+changed, that should be a separate visual comparison.
 
 ### R03 - Creative-inventory `buttonList` reflection
 
@@ -1831,15 +1828,17 @@ problem.
 
 **Current state:**
 
-- `AetherGenFloatingIsland` still has a full-volume air scan.
+- `AetherGenFloatingIsland` now exits on the first obstruction and skips
+  out-of-height placements, but successful placements still require the full
+  clearance scan.
 - `AetherGenClouds` can drift outside the current chunk and uses
   `setBlockAndNotifyAdequately` for every cloud block.
 - `AetherBiomeDecorator` allocates new tree/lake generators during decoration.
 
 **Options:**
 
-1. Add an early exit to the floating-island scan and cache tree/lake generators.
-   These do not change generated output.
+1. Cache tree/lake generators in `AetherBiomeDecorator`. This does not change
+   generated output.
 2. Clip clouds to chunk bounds. This changes where clouds appear.
 3. Use a lighter block setter for clouds. This may change notification behavior
    during generation.
