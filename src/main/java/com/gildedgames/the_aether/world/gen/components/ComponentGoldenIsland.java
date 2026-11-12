@@ -76,7 +76,7 @@ public class ComponentGoldenIsland extends AetherStructure {
                                 int j5 = this.random.nextInt(48);
 
                                 if (j5 < 2) {
-                                    // AetherGenUtils.generateGoldenOakTree(this, i2, l2 + 1, i3);
+                                    AetherGenUtils.generateGoldenOakTree(this, i2, l2 + 1, i3);
                                 } else if (j5 == 3) {
                                     if (this.random.nextInt(2) == 0) {
                                         // new WorldGenLakes(Blocks.FLOWING_WATER).generate(world, random, new

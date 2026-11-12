@@ -1703,10 +1703,11 @@ Status key:
 - **Deferred** - deliberately postponed until a later batch.
 - **Won't fix** - not worth the behavior/performance tradeoff.
 - **Done** - completed and verified.
+- **Partial** - part of the item is implemented; the rest still needs a decision.
 
 | ID | Item | Status | Recommendation | Main decision |
 |---|---|---|---|---|
-| R01 | B29 dungeon oak / golden-island vegetation | Decision | Restore golden-island trees/lakes; remove surface attempts | Should golden islands be vegetated? |
+| R01 | B29 dungeon oak / golden-island vegetation | Partial | Golden-island oaks restored; lakes still deferred | Should golden islands also have lakes? |
 | R02 | Floating-island tautologies | Decision | Add early-exit optimization now; decide shape separately | Is the current shape intentional? |
 | R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
 | R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
@@ -1720,26 +1721,32 @@ Status key:
 
 ### R01 - B29 and golden-island vegetation
 
+**Status:** partially implemented. Golden-island trees are restored; lakes are
+still deferred.
+
 **Current state:** `AetherGenDungeonOakTree` only accepts `aether_grass` metadata
-`3`. The surface decorator calls it 25 times per chunk on normal grass, so those
-attempts always fail. Golden-island components do use meta-3 grass, but their
-tree and lake generation is commented out.
+`3`. The surface decorator calls it 25 times per chunk, so those attempts fail on
+normal surface grass but can still succeed where they land on golden-island
+meta-3 grass.
 
-**Options:**
+`ComponentGoldenIsland` and `ComponentGoldenIslandStub` now call
+`AetherGenUtils.generateGoldenOakTree(...)` again. The normal biome-decoration
+trees and the 25 surface attempts were intentionally left unchanged for the next
+comparison screenshot. The lake calls remain commented out.
 
-1. Restore golden-island trees and lakes using
-   `AetherGenUtils.generateGoldenOakTree(...)` and the structure-compatible lake
-   path, then remove the 25 surface attempts.
-2. Allow the generator to accept normal grass metadata `0`, which would place
-   golden oaks on the surface.
-3. Remove `AetherGenDungeonOakTree` and accept barren golden islands.
+**Options for the remaining lake work:**
 
-**Recommendation:** option 1. It matches the existing metadata usage and the
-commented generation code, and removes wasted surface decoration work.
+1. Add a structure-aware lake generator that creates a bounded basin and cannot
+   spill off the floating island.
+2. Restore only main-island lakes and leave stubs without water.
+3. Skip lakes entirely and keep golden islands as tree-only features.
 
-**Decision needed:** should golden islands contain golden oaks and lakes? Should
-surface dungeon oaks remain, or should the 25-per-chunk surface attempts be
-removed?
+**Recommendation:** compare the new tree-only screenshot first, then decide lake
+placement and containment. Do not remove the 25 surface attempts until it is
+clear how many of the previously visible trees they were producing.
+
+**Decision needed:** should golden islands also contain lakes? If so, main island
+only, or stubs too?
 
 ### R02 - `AetherGenFloatingIsland` tautologies and scan cost
 
