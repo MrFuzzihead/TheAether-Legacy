@@ -42,6 +42,12 @@ public class AetherBiomeDecorator extends BiomeDecorator {
 
     public AetherGenSkyrootTree skyroot_tree = new AetherGenSkyrootTree(false);
 
+    private final AetherGenOakTree golden_oak_tree = new AetherGenOakTree();
+
+    private final AetherGenSkyrootTree skyroot_tree_decoration = new AetherGenSkyrootTree(true);
+
+    private final WorldGenLakes water_lake = new WorldGenLakes(Blocks.water);
+
     public AetherGenQuicksoil quicksoil_patches = new AetherGenQuicksoil();
 
     public AetherGenFloatingIsland crystal_island = new AetherGenFloatingIsland();
@@ -161,7 +167,7 @@ public class AetherBiomeDecorator extends BiomeDecorator {
         }
 
         if (this.shouldSpawn(10)) {
-            (new WorldGenLakes(Blocks.water)).generate(
+            this.water_lake.generate(
                 this.world,
                 this.rand,
                 this.chunk_X + this.rand.nextInt(16) + 8,
@@ -179,7 +185,7 @@ public class AetherBiomeDecorator extends BiomeDecorator {
     }
 
     public WorldGenerator getTree() {
-        return this.shouldSpawn(30) ? new AetherGenOakTree() : new AetherGenSkyrootTree(true);
+        return this.shouldSpawn(30) ? this.golden_oak_tree : this.skyroot_tree_decoration;
     }
 
     boolean isGoldenIslandSurface(int x, int y, int z) {

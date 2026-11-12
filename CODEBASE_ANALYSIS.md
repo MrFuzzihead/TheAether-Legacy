@@ -1713,7 +1713,7 @@ Status key:
 | R04 | `EntityRenderer.itemRenderer` reflection | Done | Early client mixin mutates the final field only for AetherEntityRenderer | None |
 | R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
-| R07 | P05 worldgen leftovers | Mixed | Apply safe early exit and generator caching; defer cloud bounds | Should clouds cross chunks? |
+| R07 | P05 worldgen leftovers | Partial | Generator caching completed; cloud changes deferred | Should clouds cross chunks? |
 | R08 | P06 first-person renderer / config | Decision | Leave renderer unless maintenance cost rises | How much renderer parity is required? |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Decision | Wire with tests or remove | Are these still planned features? |
@@ -1820,25 +1820,27 @@ problem.
 
 ### R07 - P05 remaining worldgen work
 
-**Current state:**
+**Status:** partial. Generator caching is complete; cloud behavior is deferred.
 
 - `AetherGenFloatingIsland` now exits on the first obstruction and skips
-  out-of-height placements, but successful placements still require the full
+  out-of-height placements. Successful placements still require the full
   clearance scan.
-- `AetherGenClouds` can drift outside the current chunk and uses
-  `setBlockAndNotifyAdequately` for every cloud block.
-- `AetherBiomeDecorator` allocates new tree/lake generators during decoration.
+- `AetherBiomeDecorator` now reuses cached golden-oak, skyroot, and water-lake
+  generators. RNG order and generated output are unchanged.
+- `AetherGenClouds` can still drift outside the current chunk. It uses
+  `setBlockAndNotifyAdequately`, which already uses the non-notifying flag for
+  this generator, so a direct setter would be only a negligible micro-optimization.
 
-**Options:**
+**Remaining options:**
 
-1. Cache tree/lake generators in `AetherBiomeDecorator`. This does not change
-   generated output.
-2. Clip clouds to chunk bounds. This changes where clouds appear.
-3. Use a lighter block setter for clouds. This may change notification behavior
-   during generation.
+1. Clip clouds to chunk bounds. This changes where clouds appear at chunk edges.
+2. Leave cloud placement unchanged and treat cross-chunk drift as intended.
+3. If cloud code is touched later, use a direct `setBlock(..., 2)` call only to
+   preserve the existing update behavior while avoiding the helper call.
 
-**Recommendation:** apply option 1 now. Defer cloud clipping and block-setter
-changes until the intended cloud distribution is decided.
+**Recommendation:** leave cloud placement unchanged for now. Revisit only if
+cross-chunk cloud writes cause a concrete lighting, population, or compatibility
+problem.
 
 **Decision needed:** should clouds be allowed to cross chunk boundaries?
 

@@ -2,6 +2,7 @@ package com.gildedgames.the_aether.world.biome;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -12,10 +13,13 @@ import java.util.Random;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
+import net.minecraft.world.gen.feature.WorldGenerator;
 
 import org.junit.Test;
 
 import com.gildedgames.the_aether.blocks.BlocksAether;
+import com.gildedgames.the_aether.world.biome.decoration.AetherGenOakTree;
+import com.gildedgames.the_aether.world.biome.decoration.AetherGenSkyrootTree;
 
 public class AetherBiomeDecoratorTest {
 
@@ -67,5 +71,31 @@ public class AetherBiomeDecoratorTest {
         } finally {
             BlocksAether.aether_grass = oldGrass;
         }
+    }
+
+    @Test
+    public void getTreeReusesGoldenOakGenerator() {
+        AetherBiomeDecorator decorator = new AetherBiomeDecorator();
+        Random random = mock(Random.class);
+        when(random.nextInt(30)).thenReturn(0);
+        decorator.rand = random;
+
+        WorldGenerator first = decorator.getTree();
+
+        assertTrue(first instanceof AetherGenOakTree);
+        assertSame(first, decorator.getTree());
+    }
+
+    @Test
+    public void getTreeReusesSkyrootGenerator() {
+        AetherBiomeDecorator decorator = new AetherBiomeDecorator();
+        Random random = mock(Random.class);
+        when(random.nextInt(30)).thenReturn(1);
+        decorator.rand = random;
+
+        WorldGenerator first = decorator.getTree();
+
+        assertTrue(first instanceof AetherGenSkyrootTree);
+        assertSame(first, decorator.getTree());
     }
 }
