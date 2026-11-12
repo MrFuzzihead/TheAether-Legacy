@@ -1632,3 +1632,32 @@ Still open:
   config lookups.
 
 The baseline is now **129/129 in-game checks** and **64 unit tests**.
+
+### Dead-code cleanup status
+
+Removed as genuinely unreferenced:
+
+- Unused AI: `AechorPlantAIShootPlayer`, `EntityAIUpdateState`,
+  `ZephyrAIShootTarget`, `ZephyrAITravelCourse`.
+- Never-spawned particles: `EntityBlueFX`, `EntityCloudSmokeFX`,
+  `EntityGoldenFX`, `EntityPurpleFX`.
+- `EnumGummySwetType`.
+- Unused GUI buttons: `GuiAetherButton`, `GuiDescButton`.
+- Unused worldgen: `AetherGenCave`, `AetherGenLakes`, `AetherGenLiquids`
+  (including the two unused `AetherBiomeDecorator` fields).
+- Empty/unregistered `PacketCheckKey` and its network registration.
+- Unused `AetherOverlay.getCureAlpha`.
+
+Deliberately retained:
+
+- `PacketDisplayDialogue` / `GuiServerDialogue` / `PacketDialogueClicked` —
+  currently unused, but they are the scaffolding for the planned generic
+  dialogue system rather than accidental leftovers.
+- `GuiAetherPerks` — unreachable today, but retained as the donator-perk UI
+  until the feature is either wired or explicitly removed.
+- Commented golden-island vegetation and `AetherGenDungeonOakTree` — tied to the
+  deferred B29/worldgen design decision.
+- Public config getters and NBT-backed legacy fields — left for addon/API and
+  save compatibility rather than treated as dead code.
+
+The baseline remains **129/129 in-game checks** and **64 unit tests**.

@@ -22,8 +22,6 @@ import com.gildedgames.the_aether.world.biome.decoration.AetherGenDungeonOakTree
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFloatingIsland;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFoilage;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenHolidayTree;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenLakes;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenLiquids;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenMinable;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenOakTree;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenQuicksoil;
@@ -51,11 +49,7 @@ public class AetherBiomeDecorator extends BiomeDecorator {
 
     public AetherGenFloatingIsland crystal_island = new AetherGenFloatingIsland();
 
-    public AetherGenLiquids liquid_overhang = new AetherGenLiquids();
-
     public AetherGenHolidayTree holiday_tree = new AetherGenHolidayTree();
-
-    public AetherGenLakes aether_lakes = new AetherGenLakes();
 
     public AetherGenClouds clouds = new AetherGenClouds();
 

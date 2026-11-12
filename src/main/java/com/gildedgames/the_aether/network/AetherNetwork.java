@@ -7,7 +7,6 @@ import com.gildedgames.the_aether.Aether;
 import com.gildedgames.the_aether.network.packets.PacketAccessory;
 import com.gildedgames.the_aether.network.packets.PacketAchievement;
 import com.gildedgames.the_aether.network.packets.PacketCapeChanged;
-import com.gildedgames.the_aether.network.packets.PacketCheckKey;
 import com.gildedgames.the_aether.network.packets.PacketDialogueClicked;
 import com.gildedgames.the_aether.network.packets.PacketDisplayDialogue;
 import com.gildedgames.the_aether.network.packets.PacketExtendedAttack;
@@ -80,8 +79,6 @@ public class AetherNetwork {
         INSTANCE
             .registerMessage(PacketSendSeenDialogue.class, PacketSendSeenDialogue.class, discriminant++, Side.CLIENT);
         INSTANCE.registerMessage(PacketPortalItem.class, PacketPortalItem.class, discriminant++, Side.CLIENT);
-
-        INSTANCE.registerMessage(PacketCheckKey.class, PacketCheckKey.class, discriminant++, Side.SERVER);
 
         INSTANCE.registerMessage(PacketSwetJump.class, PacketSwetJump.class, discriminant++, Side.CLIENT);
 
