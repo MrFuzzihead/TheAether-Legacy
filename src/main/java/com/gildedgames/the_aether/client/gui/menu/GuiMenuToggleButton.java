@@ -49,14 +49,12 @@ public class GuiMenuToggleButton extends GuiButton {
     }
 
     public void mouseReleased(int mouseX, int mouseY) {
-        AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
-            .set(
-                !AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
-                    .getBoolean());
+        net.minecraftforge.common.config.Property menuSetting = AetherConfig.config
+            .get("Misc", "Enables the Aether Menu", false);
+        menuSetting.set(!menuSetting.getBoolean());
         AetherConfig.config.save();
 
-        if (AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
-            .getBoolean()) {
+        if (menuSetting.getBoolean()) {
             Minecraft.getMinecraft()
                 .displayGuiScreen(new AetherMainMenu());
         }

@@ -20,7 +20,6 @@ import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiOptions;
 import net.minecraft.client.gui.GuiSelectWorld;
-import net.minecraft.client.gui.GuiYesNo;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -29,9 +28,6 @@ import net.minecraft.realms.RealmsBridge;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.demo.DemoWorldServer;
-import net.minecraft.world.storage.ISaveFormat;
-import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.common.MinecraftForge;
@@ -54,7 +50,6 @@ public class AetherMainMenu extends GuiMainMenu {
     private static final Logger logger = LogManager.getLogger();
     private static final Random rand = new Random();
     private String splashText;
-    private GuiButton buttonResetDemo;
     private int panoramaTimer;
     private DynamicTexture viewportTexture;
     private final Object field_104025_t = new Object();
@@ -243,19 +238,6 @@ public class AetherMainMenu extends GuiMainMenu {
             this.mc.displayGuiScreen(new GuiModList(this));
         }
 
-        if (p_146284_1_.id == 11) {
-            this.mc.launchIntegratedServer("Demo_World", "Demo_World", DemoWorldServer.demoWorldSettings);
-        }
-
-        if (p_146284_1_.id == 12) {
-            ISaveFormat isaveformat = this.mc.getSaveLoader();
-            WorldInfo worldinfo = isaveformat.getWorldInfo("Demo_World");
-
-            if (worldinfo != null) {
-                GuiYesNo guiyesno = GuiSelectWorld.func_152129_a(this, worldinfo.getWorldName(), 12);
-                this.mc.displayGuiScreen(guiyesno);
-            }
-        }
     }
 
     private void func_140005_i() {
@@ -265,22 +247,15 @@ public class AetherMainMenu extends GuiMainMenu {
 
     @Override
     public void confirmClicked(boolean p_73878_1_, int p_73878_2_) {
-        if (p_73878_1_ && p_73878_2_ == 12) {
-            ISaveFormat isaveformat = this.mc.getSaveLoader();
-            isaveformat.flushCache();
-            isaveformat.deleteWorldDirectory("Demo_World");
-            this.mc.displayGuiScreen(this);
-        } else if (p_73878_2_ == 13) {
-            if (p_73878_1_) {
-                try {
-                    Class oclass = Class.forName("java.awt.Desktop");
-                    Object object = oclass.getMethod("getDesktop", new Class[0])
-                        .invoke((Object) null, new Object[0]);
-                    oclass.getMethod("browse", new Class[] { URI.class })
-                        .invoke(object, new Object[] { new URI(this.field_104024_v) });
-                } catch (Throwable throwable) {
-                    logger.error("Couldn\'t open link", throwable);
-                }
+        if (p_73878_2_ == 13 && p_73878_1_) {
+            try {
+                Class oclass = Class.forName("java.awt.Desktop");
+                Object object = oclass.getMethod("getDesktop", new Class[0])
+                    .invoke((Object) null, new Object[0]);
+                oclass.getMethod("browse", new Class[] { URI.class })
+                    .invoke(object, new Object[] { new URI(this.field_104024_v) });
+            } catch (Throwable throwable) {
+                logger.error("Couldn't open link", throwable);
             }
 
             this.mc.displayGuiScreen(this);

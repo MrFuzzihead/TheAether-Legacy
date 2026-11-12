@@ -1676,3 +1676,13 @@ The baseline remains **129/129 in-game checks** and **64 unit tests**.
 
 Added unit coverage for cross-stack medal counting and consumption. The
 baseline is now **129/129 in-game checks** and **66 unit tests**.
+
+### Final safe cleanup status
+
+- Removed unused `EntityMoa.secsUntilFlying` and `secsUntilWalking`.
+- Removed the unreachable `AetherMainMenu` demo-world fields, action handlers,
+  confirmation/deletion branch, and related imports.
+- Consolidated the menu-toggle config property lookup so `mouseReleased` reads
+  and writes one `Property` instance instead of querying the config repeatedly.
+
+The baseline remains **129/129 in-game checks** and **66 unit tests**.

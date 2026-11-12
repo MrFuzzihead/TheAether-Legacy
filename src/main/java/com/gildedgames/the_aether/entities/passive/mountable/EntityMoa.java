@@ -27,7 +27,7 @@ public class EntityMoa extends EntitySaddleMount {
 
     public float wingRotation, destPos, prevDestPos, prevWingRotation;
 
-    protected int ticksOffGround, ticksUntilFlap, secsUntilFlying, secsUntilWalking, secsUntilHungry, secsUntilEgg;
+    protected int ticksOffGround, ticksUntilFlap, secsUntilHungry, secsUntilEgg;
 
     public EntityMoa(World world) {
         super(world);
