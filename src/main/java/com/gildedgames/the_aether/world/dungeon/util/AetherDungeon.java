@@ -7,6 +7,20 @@ import net.minecraft.init.Blocks;
 import net.minecraft.world.World;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
+/**
+ * Geometry and block-placement helper for absolute-coordinate dungeon generation, currently used by
+ * {@link com.gildedgames.the_aether.world.dungeon.BronzeDungeon}.
+ *
+ * <p>
+ * This class is intentionally separate from
+ * {@link com.gildedgames.the_aether.world.gen.AetherStructure}. This helper extends
+ * {@link WorldGenerator} and writes directly into the world during chunk population, while
+ * {@code AetherStructure} components are bounded
+ * {@link net.minecraft.world.gen.structure.StructureComponent}s with relative offsets, metadata, and
+ * NBT persistence. Unifying them would require an adapter that preserves those different coordinate
+ * and block-update semantics, so the duplication is kept until another absolute-coordinate dungeon
+ * needs the same geometry.
+ */
 public abstract class AetherDungeon extends WorldGenerator {
 
     public int chance;

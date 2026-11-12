@@ -1715,7 +1715,7 @@ Status key:
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
 | R07 | P05 worldgen leftovers | Mixed | Apply safe early exit and generator caching; defer cloud bounds | Should clouds cross chunks? |
 | R08 | P06 first-person renderer / config | Decision | Leave renderer unless maintenance cost rises | How much renderer parity is required? |
-| R09 | Unify dungeon base classes | Deferred | Leave both documented classes unless adding dungeons | Is the rewrite worth it? |
+| R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Decision | Wire with tests or remove | Are these still planned features? |
 | R11 | Feature gaps | Decision | Prioritise OreDictionary, NEI, localization | Which features are in scope? |
 
@@ -1861,20 +1861,22 @@ path updates the cache.
 
 ### R09 - Unify `AetherDungeon` and `AetherStructure`
 
-**Current state:** `AetherDungeon` is a `WorldGenerator` using absolute
-coordinates; `AetherStructure` is a `StructureComponent` using bounding-box
-coordinates and metadata.
+**Status:** won't fix for now; the boundary is documented.
 
-**Options:**
+`AetherDungeon` is an absolute-coordinate `WorldGenerator` used by
+`BronzeDungeon` during chunk population. `AetherStructure` is a bounded
+`StructureComponent` with relative offsets, metadata, and NBT persistence.
 
-1. Extract shared geometry into a callback/adapter helper.
-2. Leave both classes and document the boundary.
-3. Rewrite one in terms of the other.
+The classes share geometry loops, but they use different coordinate models and
+block-update APIs. Extracting a common helper would require an adapter that
+preserves both behaviors and their random-call order, creating a large worldgen
+regression surface for no current gameplay benefit.
 
-**Recommendation:** leave both as-is unless new dungeon types are planned. The
-rewrite is large and the regression surface is mostly worldgen.
+Both classes now document why they are intentionally separate. Revisit this only
+if another absolute-coordinate dungeon needs the same geometry, or if a shared
+geometry bug has to be fixed in both places.
 
-**Decision needed:** is reducing this duplication worth a structural rewrite?
+**Decision needed:** none.
 
 ### R10 - Dialogue and perk scaffolding
 
