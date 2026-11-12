@@ -6,6 +6,7 @@ import java.util.Collection;
 import net.minecraft.block.Block;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -30,10 +31,12 @@ import com.gildedgames.the_aether.entities.effects.PotionInebriation;
 import com.gildedgames.the_aether.entities.hostile.EntityAechorPlant;
 import com.gildedgames.the_aether.entities.hostile.EntityCockatrice;
 import com.gildedgames.the_aether.entities.passive.EntityMiniCloud;
+import com.gildedgames.the_aether.entities.passive.mountable.EntityMoa;
 import com.gildedgames.the_aether.entities.passive.mountable.EntitySwet;
 import com.gildedgames.the_aether.entities.projectile.crystals.EntityCrystal;
 import com.gildedgames.the_aether.entities.projectile.crystals.EnumCrystalType;
 import com.gildedgames.the_aether.entities.util.AetherMoaTypes;
+import com.gildedgames.the_aether.entities.util.EntityAetherItem;
 import com.gildedgames.the_aether.items.ItemMoaEgg;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
@@ -80,6 +83,8 @@ public final class ServerGameTests {
         checkCreativeTabs();
         checkDimensionRegistration();
         checkEntityRegistry();
+        checkEntityFactory();
+        checkDungeonKeyReplacement();
         checkAetherAPIRegistries();
         checkToolAttackDamage();
         checkRemedyBucket();
@@ -174,6 +179,42 @@ public final class ServerGameTests {
         check("Aether entity class map is populated", EntitiesAether.classToStringMapping.size() > 0);
         check("Aether moa id resolves", EntitiesAether.getClassFromID(0) != null);
         check("Aether moa name resolves", "moa".equals(EntitiesAether.getStringFromID(0)));
+    }
+
+    private static void checkEntityFactory() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for entity factory checks", false);
+            return;
+        }
+
+        check(
+            "entity factory creates a moa without reflection",
+            EntitiesAether.createEntityByID(0, world) instanceof EntityMoa);
+        check("unknown entity ids do not create entities", EntitiesAether.createEntityByID(999, world) == null);
+    }
+
+    private static void checkDungeonKeyReplacement() {
+        WorldServer world = MinecraftServer.getServer()
+            .worldServerForDimension(0);
+        if (world == null) {
+            check("overworld is available for dungeon key checks", false);
+            return;
+        }
+
+        EntityItem key = new EntityItem(world, 8.5D, 200.0D, 8.5D, new ItemStack(ItemsAether.dungeon_key));
+        net.minecraftforge.event.entity.EntityJoinWorldEvent event = new net.minecraftforge.event.entity.EntityJoinWorldEvent(
+            key,
+            world);
+
+        new AetherEventHandler().onEntityJoinWorld(event);
+
+        check("dungeon key join events are replaced", event.isCanceled());
+        check(
+            "EntityAetherItem is invulnerable",
+            new EntityAetherItem(world, 8.5D, 200.0D, 8.5D, new ItemStack(ItemsAether.dungeon_key))
+                .isEntityInvulnerable());
     }
 
     private static void checkAetherAPIRegistries() {

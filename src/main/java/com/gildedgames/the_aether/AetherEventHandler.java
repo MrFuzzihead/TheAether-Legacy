@@ -39,6 +39,7 @@ import com.gildedgames.the_aether.entities.EntitiesAether;
 import com.gildedgames.the_aether.entities.bosses.EntityValkyrie;
 import com.gildedgames.the_aether.entities.passive.mountable.EntityAerbunny;
 import com.gildedgames.the_aether.entities.passive.mountable.EntityFlyingCow;
+import com.gildedgames.the_aether.entities.util.EntityAetherItem;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.dungeon.ItemDungeonKey;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
@@ -51,7 +52,6 @@ import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.world.AetherData;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
 import cpw.mods.fml.common.eventhandler.Event;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.ItemCraftedEvent;
@@ -411,17 +411,35 @@ public class AetherEventHandler {
 
     @SubscribeEvent
     public void onEntityJoinWorld(EntityJoinWorldEvent event) {
-        // Dungeon keys are made invulnerable so they never despawn. Previously
-        // this was a per-tick scan of every loaded entity in every world (an
-        // O(entities) sweep at 20 tps); the join event fires exactly when the
-        // item spawns, which is strictly better.
-        if (!event.world.isRemote && event.entity instanceof EntityItem) {
+        // Dungeon keys are invulnerable so they never despawn. Swap the normal
+        // EntityItem for EntityAetherItem on join instead of mutating the
+        // private Entity.invulnerable field through reflection.
+        if (!event.world.isRemote && event.entity instanceof EntityItem
+            && !(event.entity instanceof EntityAetherItem)) {
             EntityItem entityItem = (EntityItem) event.entity;
 
             if (entityItem.getEntityItem()
                 .getItem() == ItemsAether.dungeon_key) {
-                ObfuscationReflectionHelper
-                    .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
+                EntityAetherItem replacement = new EntityAetherItem(
+                    event.world,
+                    entityItem.posX,
+                    entityItem.posY,
+                    entityItem.posZ,
+                    entityItem.getEntityItem()
+                        .copy());
+
+                replacement.motionX = entityItem.motionX;
+                replacement.motionY = entityItem.motionY;
+                replacement.motionZ = entityItem.motionZ;
+                replacement.age = entityItem.age;
+                replacement.delayBeforeCanPickup = entityItem.delayBeforeCanPickup;
+                replacement.lifespan = entityItem.lifespan;
+                replacement.hoverStart = entityItem.hoverStart;
+                replacement.rotationYaw = entityItem.rotationYaw;
+                replacement.rotationPitch = entityItem.rotationPitch;
+
+                event.setCanceled(true);
+                event.world.spawnEntityInWorld(replacement);
             }
         }
     }

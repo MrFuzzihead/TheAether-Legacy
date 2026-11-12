@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
@@ -35,6 +35,7 @@ import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.tools.ItemValkyrieTool;
 import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.network.packets.PacketCapeChanged;
+import com.gildedgames.the_aether.network.packets.PacketJumping;
 import com.gildedgames.the_aether.network.packets.PacketPerkChanged;
 import com.gildedgames.the_aether.network.packets.PacketPortalItem;
 import com.gildedgames.the_aether.network.packets.PacketSendPoisonTime;
@@ -51,7 +52,6 @@ import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.world.TeleporterAether;
 
 import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.relauncher.ReflectionHelper;
 
 public class PlayerAether implements IPlayerAether {
 
@@ -260,10 +260,14 @@ public class PlayerAether implements IPlayerAether {
             this.wingSinage += 0.1F;
         }
 
-        boolean hasJumped = ReflectionHelper
-            .getPrivateValue(EntityLivingBase.class, this.getEntity(), "isJumping", "field_70703_bu");
+        if (this.getEntity().worldObj.isRemote && this.getEntity() instanceof EntityPlayerSP) {
+            boolean jumping = ((EntityPlayerSP) this.getEntity()).movementInput.jump;
 
-        this.setJumping(hasJumped);
+            if (this.isJumping != jumping) {
+                this.isJumping = jumping;
+                AetherNetwork.sendToServer(new PacketJumping(jumping));
+            }
+        }
 
         this.getEntity().worldObj.theProfiler.startSection("portal");
 

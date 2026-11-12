@@ -109,7 +109,7 @@ does this for `BattlegearClientEventHandler`).
 | Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
 | Mixins | **None.** `usesMixins = false`, no mixin JSON, no `mixinsPackage`, no `@Shadow`/`@Inject`/`@Redirect` classes. |
 | ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
-| Reflection | **Present:** ~15 reflective operations across 6 files. No `setAccessible(...)` calls. |
+| Reflection | **Reduced:** 3 remaining sites (creative `buttonList`, `EntityRenderer.itemRenderer`, `Desktop` link). The original audit inventory below is preserved for context. |
 
 The classpath does contain `org.ow2.asm:asm-debug-all:5.0.3` transitively from
 Minecraft/FML. That is a library dependency required by Forge/launchwrapper, not
@@ -1583,3 +1583,26 @@ Only one refactor item remains: unifying the `AetherDungeon` and
 `AetherStructure` base classes. That is a larger structural rewrite because one
 is a `WorldGenerator` using absolute coordinates and the other is a
 `StructureComponent` using bounding-box-relative coordinates and metadata.
+
+### Reflection batch 1 status
+
+Removed:
+
+- **Dungeon keys** — `EntityJoinWorldEvent` now swaps a normal `EntityItem` for
+  `EntityAetherItem` instead of setting `Entity.invulnerable` reflectively.
+- **Player jump state** — the client reads `EntityPlayerSP.movementInput.jump`
+  and sends `PacketJumping` on change; the server updates
+  `PlayerAether.isJumping`. The per-tick reflective `isJumping` lookup is gone.
+- **GUI positions** — accessory-button placement computes the known inventory /
+  creative-screen dimensions instead of reading `guiLeft`, `guiTop`, `xSize` and
+  `ySize` reflectively.
+- **Entity construction** — `EntitiesAether.createEntityByID` uses an explicit
+  ID switch instead of `Class.getConstructor(...).newInstance(...)`.
+
+Remaining reflection is intentionally deferred:
+
+- Creative-inventory `GuiScreen.buttonList`.
+- `EntityRenderer.itemRenderer` final-field assignment.
+- `AetherMainMenu` `java.awt.Desktop` reflective link opening.
+
+The baseline is now **129/129 in-game checks** and **60 unit tests**.

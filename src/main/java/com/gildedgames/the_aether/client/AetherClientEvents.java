@@ -311,14 +311,10 @@ public class AetherClientEvents {
         if (event.gui instanceof GuiContainer) {
             EntityPlayer player = Minecraft.getMinecraft().thePlayer;
 
-            int guiLeft = ObfuscationReflectionHelper
-                .getPrivateValue(GuiContainer.class, (GuiContainer) event.gui, "guiLeft", "field_147003_i");
-            int guiTop = ObfuscationReflectionHelper
-                .getPrivateValue(GuiContainer.class, (GuiContainer) event.gui, "guiTop", "field_147009_r");
-            int xSize = ObfuscationReflectionHelper
-                .getPrivateValue(GuiContainer.class, (GuiContainer) event.gui, "xSize", "field_146999_f");
-            int ySize = ObfuscationReflectionHelper
-                .getPrivateValue(GuiContainer.class, (GuiContainer) event.gui, "ySize", "field_147000_g");
+            int xSize = event.gui instanceof GuiContainerCreative ? 195 : 176;
+            int ySize = event.gui instanceof GuiContainerCreative ? 136 : 166;
+            int guiLeft = (event.gui.width - xSize) / 2;
+            int guiTop = (event.gui.height - ySize) / 2;
 
             if (player.capabilities.isCreativeMode) {
                 if (event.gui instanceof GuiContainerCreative) {
@@ -393,10 +389,8 @@ public class AetherClientEvents {
 
                 if (guiScreen.func_147056_g() == CreativeTabs.tabInventory.getTabIndex()
                     && !buttonList.contains(ACCESSORY_BUTTON)) {
-                    int guiLeft = ObfuscationReflectionHelper
-                        .getPrivateValue(GuiContainer.class, (GuiContainer) guiScreen, "guiLeft", "field_147003_i");
-                    int guiTop = ObfuscationReflectionHelper
-                        .getPrivateValue(GuiContainer.class, (GuiContainer) guiScreen, "guiTop", "field_147009_r");
+                    int guiLeft = (guiScreen.width - 195) / 2;
+                    int guiTop = (guiScreen.height - 136) / 2;
 
                     buttonList.add(ACCESSORY_BUTTON.setPosition(guiLeft + 28, guiTop + 38));
                 } else if (previousSelectedTabIndex == CreativeTabs.tabInventory.getTabIndex()) {

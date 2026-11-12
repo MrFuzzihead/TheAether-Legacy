@@ -12,6 +12,7 @@ import com.gildedgames.the_aether.network.packets.PacketDialogueClicked;
 import com.gildedgames.the_aether.network.packets.PacketDisplayDialogue;
 import com.gildedgames.the_aether.network.packets.PacketExtendedAttack;
 import com.gildedgames.the_aether.network.packets.PacketInitiateValkyrieFight;
+import com.gildedgames.the_aether.network.packets.PacketJumping;
 import com.gildedgames.the_aether.network.packets.PacketOpenContainer;
 import com.gildedgames.the_aether.network.packets.PacketPerkChanged;
 import com.gildedgames.the_aether.network.packets.PacketPortalItem;
@@ -65,6 +66,7 @@ public class AetherNetwork {
         INSTANCE.registerMessage(PacketSetTime.class, PacketSetTime.class, discriminant++, Side.SERVER);
 
         INSTANCE.registerMessage(PacketSendSneaking.class, PacketSendSneaking.class, discriminant++, Side.SERVER);
+        INSTANCE.registerMessage(PacketJumping.class, PacketJumping.class, discriminant++, Side.SERVER);
 
         INSTANCE.registerMessage(PacketSendEternalDay.class, PacketSendEternalDay.class, discriminant++, Side.CLIENT);
         INSTANCE.registerMessage(PacketSendShouldCycle.class, PacketSendShouldCycle.class, discriminant++, Side.CLIENT);
