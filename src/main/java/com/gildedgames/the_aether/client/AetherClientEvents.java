@@ -29,11 +29,10 @@ import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent.DrawScreenEvent;
+import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent.SetArmorModel;
-
-import org.lwjgl.input.Mouse;
 
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.api.accessories.AccessoryType;
@@ -101,7 +100,6 @@ public class AetherClientEvents {
                     mc.thePlayer.movementInput = new AetherMovementInput(mc, mc.gameSettings);
                 }
 
-                handleExtendedReach(mc);
             }
         }
 
@@ -118,65 +116,71 @@ public class AetherClientEvents {
         }
     }
 
+    @SubscribeEvent
+    public void onMouseEvent(MouseEvent event) {
+        if (event.button == 0 && event.buttonstate) {
+            Minecraft mc = Minecraft.getMinecraft();
+
+            if (mc.currentScreen == null) {
+                this.handleExtendedReach(mc);
+            }
+        }
+    }
+
     private void handleExtendedReach(Minecraft mc) {
         EntityPlayer player = mc.thePlayer;
 
         if (player != null) {
-            if (Mouse.getEventButton() == 0) {
-                if (Mouse.getEventButtonState()) {
-                    ItemStack stack = player.getHeldItem();
+            ItemStack stack = player.getHeldItem();
 
-                    if (stack != null) {
-                        if (isValkyrieItem(stack.getItem())) {
-                            Vec3 playerVision = player.getLookVec();
-                            AxisAlignedBB reachDistance = player.boundingBox.expand(10.0D, 10.0D, 10.0D);
+            if (stack != null) {
+                if (isValkyrieItem(stack.getItem())) {
+                    Vec3 playerVision = player.getLookVec();
+                    AxisAlignedBB reachDistance = player.boundingBox.expand(10.0D, 10.0D, 10.0D);
 
-                            List<Entity> locatedEntities = player.worldObj
-                                .getEntitiesWithinAABB(Entity.class, reachDistance);
+                    List<Entity> locatedEntities = player.worldObj.getEntitiesWithinAABB(Entity.class, reachDistance);
 
-                            Entity found = null;
-                            double foundLen = 0.0D;
+                    Entity found = null;
+                    double foundLen = 0.0D;
 
-                            for (Object o : locatedEntities) {
-                                if (o == player) {
-                                    continue;
-                                }
-
-                                Entity ent = (Entity) o;
-
-                                if (!ent.canBeCollidedWith() && !(ent instanceof EntityDragon)) {
-                                    continue;
-                                }
-
-                                Vec3 vec = Vec3.createVectorHelper(
-                                    ent.posX - player.posX,
-                                    ent.boundingBox.minY + ent.height / 2f - player.posY - player.getEyeHeight(),
-                                    ent.posZ - player.posZ);
-                                double len = vec.lengthVector();
-
-                                if (len > 8.0F) {
-                                    continue;
-                                }
-
-                                vec = vec.normalize();
-                                double dot = playerVision.dotProduct(vec);
-
-                                if (dot < 1.0 - 0.125 / len || !player.canEntityBeSeen(ent)) {
-                                    continue;
-                                }
-
-                                if (foundLen == 0.0 || len < foundLen) {
-                                    found = ent;
-                                    foundLen = len;
-                                }
-                            }
-
-                            if (found != null && player.ridingEntity != found) {
-                                stack.damageItem(1, player);
-
-                                AetherNetwork.sendToServer(new PacketExtendedAttack(found.getEntityId()));
-                            }
+                    for (Object o : locatedEntities) {
+                        if (o == player) {
+                            continue;
                         }
+
+                        Entity ent = (Entity) o;
+
+                        if (!ent.canBeCollidedWith() && !(ent instanceof EntityDragon)) {
+                            continue;
+                        }
+
+                        Vec3 vec = Vec3.createVectorHelper(
+                            ent.posX - player.posX,
+                            ent.boundingBox.minY + ent.height / 2f - player.posY - player.getEyeHeight(),
+                            ent.posZ - player.posZ);
+                        double len = vec.lengthVector();
+
+                        if (len > 8.0F) {
+                            continue;
+                        }
+
+                        vec = vec.normalize();
+                        double dot = playerVision.dotProduct(vec);
+
+                        if (dot < 1.0 - 0.125 / len || !player.canEntityBeSeen(ent)) {
+                            continue;
+                        }
+
+                        if (foundLen == 0.0 || len < foundLen) {
+                            found = ent;
+                            foundLen = len;
+                        }
+                    }
+
+                    if (found != null && player.ridingEntity != found) {
+                        stack.damageItem(1, player);
+
+                        AetherNetwork.sendToServer(new PacketExtendedAttack(found.getEntityId()));
                     }
                 }
             }

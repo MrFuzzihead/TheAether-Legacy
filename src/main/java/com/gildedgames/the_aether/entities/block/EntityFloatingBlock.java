@@ -70,17 +70,19 @@ public class EntityFloatingBlock extends Entity implements IEntityAdditionalSpaw
         int j = MathHelper.floor_double(this.posY);
         int k = MathHelper.floor_double(this.posZ);
 
-        List<?> list = this.worldObj
-            .getEntitiesWithinAABBExcludingEntity(this, this.boundingBox.expand(0.0D, 1.0D, 0.0D));
+        if (!this.worldObj.isRemote) {
+            List<?> list = this.worldObj
+                .getEntitiesWithinAABBExcludingEntity(this, this.boundingBox.expand(0.0D, 1.0D, 0.0D));
 
-        for (int stack = 0; stack < list.size(); ++stack) {
-            Entity entity = (Entity) list.get(stack);
+            for (int stack = 0; stack < list.size(); ++stack) {
+                Entity entity = (Entity) list.get(stack);
 
-            if (!(entity instanceof EntityFloatingBlock)) {
-                entity.setPosition(entity.posX, this.posY + 2.6D, entity.posZ);
-                entity.motionY = 0.0D;
-                entity.onGround = true;
-                entity.fallDistance = 0.0F;
+                if (!(entity instanceof EntityFloatingBlock)) {
+                    entity.setPosition(entity.posX, this.posY + 2.6D, entity.posZ);
+                    entity.motionY = 0.0D;
+                    entity.onGround = true;
+                    entity.fallDistance = 0.0F;
+                }
             }
         }
 

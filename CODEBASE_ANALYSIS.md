@@ -1661,3 +1661,18 @@ Deliberately retained:
   save compatibility rather than treated as dead code.
 
 The baseline remains **129/129 in-game checks** and **64 unit tests**.
+
+### Follow-up batch status
+
+- **Valkyrie medal fee** — the client now sums victory medals across the whole
+  inventory, and the server consumes ten total medals across stacks. The packet
+  no longer requires all ten to be in one slot.
+- **P03** — `EntityFloatingBlock` now performs its entity-push scan on the
+  authoritative server only. `EntityHook` still has three distinct target
+  fields to clear; those are semantically different, so they were not merged.
+- **P06** — extended-reach attacks moved from the tick-loop `Mouse` event query
+  to Forge `MouseEvent`, so they no longer read stale event state. The
+  first-person renderer duplication and repeated config lookups remain.
+
+Added unit coverage for cross-stack medal counting and consumption. The
+baseline is now **129/129 in-game checks** and **66 unit tests**.

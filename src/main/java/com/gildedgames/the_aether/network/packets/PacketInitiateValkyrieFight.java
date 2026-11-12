@@ -2,6 +2,8 @@ package com.gildedgames.the_aether.network.packets;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 
 import com.gildedgames.the_aether.entities.bosses.valkyrie_queen.EntityValkyrieQueen;
@@ -46,16 +48,9 @@ public class PacketInitiateValkyrieFight extends AetherPacket<PacketInitiateValk
             return;
         }
 
-        // Validate the slot actually holds the required 10 victory medals
-        // before consuming anything; the client GUI checks this, but the
-        // server must not trust it.
-        if (message.slotId < 0 || message.slotId >= player.inventory.mainInventory.length) {
-            return;
-        }
-
-        ItemStack medalStack = player.inventory.mainInventory[message.slotId];
-
-        if (medalStack == null || medalStack.getItem() != ItemsAether.victory_medal || medalStack.stackSize < 10) {
+        // Validate the total medal count before consuming anything. The fee is
+        // ten medals total, not necessarily ten in one stack.
+        if (countMedals(player.inventory, ItemsAether.victory_medal) < 10) {
             return;
         }
 
@@ -77,13 +72,37 @@ public class PacketInitiateValkyrieFight extends AetherPacket<PacketInitiateValk
                 return;
             }
 
-            // Consume exactly 10 medals (the entry fee) with proper inventory
-            // sync; previously the entire stack in the slot was discarded.
-            player.inventory.decrStackSize(message.slotId, 10);
+            // Consume exactly 10 medals (the entry fee), taking from as many
+            // stacks as needed.
+            consumeMedals(player.inventory, ItemsAether.victory_medal, 10);
 
             queen.setBossReady(true);
             PlayerAether.get(player)
                 .setFocusedBoss(queen);
+        }
+    }
+
+    static int countMedals(InventoryPlayer inventory, Item medal) {
+        int count = 0;
+
+        for (ItemStack stack : inventory.mainInventory) {
+            if (stack != null && stack.getItem() == medal) {
+                count += stack.stackSize;
+            }
+        }
+
+        return count;
+    }
+
+    static void consumeMedals(InventoryPlayer inventory, Item medal, int amount) {
+        for (int i = 0; i < inventory.mainInventory.length && amount > 0; ++i) {
+            ItemStack stack = inventory.mainInventory[i];
+
+            if (stack != null && stack.getItem() == medal) {
+                int taken = Math.min(amount, stack.stackSize);
+                inventory.decrStackSize(i, taken);
+                amount -= taken;
+            }
         }
     }
 
