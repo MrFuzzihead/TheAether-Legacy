@@ -1650,11 +1650,12 @@ Removed as genuinely unreferenced:
 
 Deliberately retained:
 
-- `PacketDisplayDialogue` / `GuiServerDialogue` / `PacketDialogueClicked` —
-  currently unused, but they are the scaffolding for the planned generic
-  dialogue system rather than accidental leftovers.
-- `GuiAetherPerks` — unreachable today, but retained as the donator-perk UI
-  until the feature is either wired or explicitly removed.
+- Generic dialogue scaffolding was removed in R10. The shared `GuiDialogue` /
+  `DialogueOption` classes remain because the Valkyrie Queen uses them, but the
+  unused server-dialogue packets, event, and `GuiServerDialogue` were deleted.
+- `GuiAetherPerks` and `GuiButtonPerks` were removed; the working perk system
+  (`PacketPerkChanged`, `GuiCustomizationScreen`, `AetherRankings`, and
+  `DonatorMoaSkin`) remains.
 - Golden-island vegetation and lake scaffolding — resolved by R01. Golden oaks
   are generated directly, default trees are suppressed on meta-3 surface grass,
   and the unused `AetherGenDungeonOakTree` plus commented lake code were removed.
@@ -1717,7 +1718,7 @@ Status key:
 | R08a | First-person renderer duplication | Won't fix | Keep custom renderer for glove/Battlegear parity | None |
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
-| R10 | Dialogue/perk scaffolding | Decision | Wire with tests or remove | Are these still planned features? |
+| R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
 | R11 | Feature gaps | Decision | Prioritise OreDictionary, NEI, localization | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
@@ -1895,26 +1896,22 @@ geometry bug has to be fixed in both places.
 
 ### R10 - Dialogue and perk scaffolding
 
-**Current state:**
+**Status:** completed by removal.
 
-- `PacketDisplayDialogue`, `PacketDialogueClicked`, and `GuiServerDialogue` exist
-  but have no sender.
-- `GuiAetherPerks` is unreachable because its only button is commented out.
-- Some NBT/public legacy fields are retained for compatibility.
+The unused generic server-dialogue path was removed: `PacketDisplayDialogue`,
+`PacketDialogueClicked`, `GuiServerDialogue`, `DialogueClickedEvent`, their
+network registrations, and their round-trip test.
 
-**Options:**
+The shared `GuiDialogue`, `DialogueOption`, and `GuiValkyrieDialogue` classes
+remain because the Valkyrie Queen uses them directly. Her fight flow still uses
+`PacketInitiateValkyrieFight`.
 
-1. Wire generic dialogue into a server-side dialogue registry/API.
-2. Wire `GuiAetherPerks` into the accessories screen.
-3. Remove both features and their supporting classes.
-4. Keep as documented scaffolding for future work.
+The unreachable `GuiAetherPerks` and `GuiButtonPerks` were removed, along with
+the dead id-24 handler and `gui.perks.*` localization keys. The working perk
+system remains: `PacketPerkChanged`, `GuiCustomizationScreen`, `AetherRankings`,
+`DonatorMoaSkin`, and `EnumAetherPerkType`.
 
-**Recommendation:** make an explicit product decision per feature. Either commit
-to wiring them with tests, or remove them. Avoid leaving ambiguous scaffolding
-indefinitely.
-
-**Decision needed:** are generic dialogue and donator-perk customization still
-planned features?
+**Decision needed:** none.
 
 ### R11 - Feature gaps
 
@@ -1922,8 +1919,6 @@ Still open from section 7:
 
 - OreDictionary coverage beyond `stickWood`.
 - Optional NEI recipe handlers.
-- Generic dialogue wiring.
-- Donator-perk UI wiring.
 - Config validation for IDs/spawn rates.
 - Data-driven dungeon loot tables.
 - Boss-arena state cleanup beyond the current fixes.

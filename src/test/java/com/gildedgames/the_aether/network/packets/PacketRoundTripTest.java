@@ -2,9 +2,6 @@ package com.gildedgames.the_aether.network.packets;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import org.junit.Test;
 
 import io.netty.buffer.ByteBuf;
@@ -24,27 +21,6 @@ public class PacketRoundTripTest {
 
         assertEquals(0.25F, decoded.timeVariable, 0.00001F);
         assertEquals(4, decoded.dimensionId);
-        assertEquals(0, buffer.readableBytes());
-    }
-
-    @Test
-    public void dialoguePacketRoundTrips() {
-        ByteBuf buffer = Unpooled.buffer();
-        PacketDisplayDialogue original = new PacketDisplayDialogue(
-            "test_dialogue",
-            "A test dialogue",
-            new ArrayList<String>(Arrays.asList("first option", "second option")));
-
-        original.toBytes(buffer);
-
-        PacketDisplayDialogue decoded = new PacketDisplayDialogue();
-        decoded.fromBytes(buffer);
-
-        assertEquals("test_dialogue", decoded.dialogueName);
-        assertEquals("A test dialogue", decoded.dialogue);
-        assertEquals(2, decoded.dialogueText.size());
-        assertEquals("first option", decoded.dialogueText.get(0));
-        assertEquals("second option", decoded.dialogueText.get(1));
         assertEquals(0, buffer.readableBytes());
     }
 
