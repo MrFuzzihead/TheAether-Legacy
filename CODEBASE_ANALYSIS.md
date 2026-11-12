@@ -1656,8 +1656,9 @@ Deliberately retained:
   dialogue system rather than accidental leftovers.
 - `GuiAetherPerks` — unreachable today, but retained as the donator-perk UI
   until the feature is either wired or explicitly removed.
-- Commented golden-island vegetation and `AetherGenDungeonOakTree` — tied to the
-  deferred B29/worldgen design decision.
+- Golden-island vegetation and lake scaffolding — resolved by R01. Golden oaks
+  are generated directly, default trees are suppressed on meta-3 surface grass,
+  and the unused `AetherGenDungeonOakTree` plus commented lake code were removed.
 - Public config getters and NBT-backed legacy fields — left for addon/API and
   save compatibility rather than treated as dead code.
 
@@ -1707,7 +1708,7 @@ Status key:
 
 | ID | Item | Status | Recommendation | Main decision |
 |---|---|---|---|---|
-| R01 | B29 dungeon oak / golden-island vegetation | Partial | Golden-island oaks restored; lakes still deferred | Should golden islands also have lakes? |
+| R01 | B29 dungeon oak / golden-island vegetation | Done | Golden oaks restored; default trees suppressed; dead lake code removed | None |
 | R02 | Floating-island tautologies | Decision | Add early-exit optimization now; decide shape separately | Is the current shape intentional? |
 | R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
 | R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
@@ -1721,32 +1722,21 @@ Status key:
 
 ### R01 - B29 and golden-island vegetation
 
-**Status:** partially implemented. Golden-island trees are restored; lakes are
-still deferred.
+**Status:** completed.
 
-**Current state:** `AetherGenDungeonOakTree` only accepts `aether_grass` metadata
-`3`. The surface decorator calls it 25 times per chunk, so those attempts fail on
-normal surface grass but can still succeed where they land on golden-island
-meta-3 grass.
+`ComponentGoldenIsland` and `ComponentGoldenIslandStub` now generate golden oaks
+directly with `AetherGenUtils.generateGoldenOakTree(...)`.
 
-`ComponentGoldenIsland` and `ComponentGoldenIslandStub` now call
-`AetherGenUtils.generateGoldenOakTree(...)` again. The normal biome-decoration
-trees and the 25 surface attempts were intentionally left unchanged for the next
-comparison screenshot. The lake calls remain commented out.
+The normal three-tree decoration pass and the holiday-tree pass skip columns
+whose surface is meta-3 golden-island grass. Normal trees still generate on
+meta-0 terrain in the same chunk. The 25 per-chunk surface dungeon-oak attempts
+were removed, and the now-unused `AetherGenDungeonOakTree` class was deleted.
 
-**Options for the remaining lake work:**
+The commented golden-island lake branches were also removed. Lakes are
+explicitly out of scope for golden dungeon islands, so no lake generator is
+retained for them.
 
-1. Add a structure-aware lake generator that creates a bounded basin and cannot
-   spill off the floating island.
-2. Restore only main-island lakes and leave stubs without water.
-3. Skip lakes entirely and keep golden islands as tree-only features.
-
-**Recommendation:** compare the new tree-only screenshot first, then decide lake
-placement and containment. Do not remove the 25 surface attempts until it is
-clear how many of the previously visible trees they were producing.
-
-**Decision needed:** should golden islands also contain lakes? If so, main island
-only, or stubs too?
+**Decision needed:** none.
 
 ### R02 - `AetherGenFloatingIsland` tautologies and scan cost
 
@@ -1845,23 +1835,19 @@ problem.
 - `AetherGenClouds` can drift outside the current chunk and uses
   `setBlockAndNotifyAdequately` for every cloud block.
 - `AetherBiomeDecorator` allocates new tree/lake generators during decoration.
-- Golden islands are barren and `AetherGenDungeonOakTree` is unused at its
-  current call site.
 
 **Options:**
 
 1. Add an early exit to the floating-island scan and cache tree/lake generators.
    These do not change generated output.
 2. Clip clouds to chunk bounds. This changes where clouds appear.
-3. Complete golden-island vegetation/lakes (see R01).
-4. Use a lighter block setter for clouds. This may change notification behavior
+3. Use a lighter block setter for clouds. This may change notification behavior
    during generation.
 
 **Recommendation:** apply option 1 now. Defer cloud clipping and block-setter
 changes until the intended cloud distribution is decided.
 
-**Decision needed:** should clouds be allowed to cross chunk boundaries, and what
-should golden islands contain?
+**Decision needed:** should clouds be allowed to cross chunk boundaries?
 
 ### R08 - P06 first-person renderer and config lookups
 
@@ -1926,7 +1912,6 @@ Still open from section 7:
 
 - OreDictionary coverage beyond `stickWood`.
 - Optional NEI recipe handlers.
-- Golden-island vegetation and lakes.
 - Generic dialogue wiring.
 - Donator-perk UI wiring.
 - Config validation for IDs/spawn rates.

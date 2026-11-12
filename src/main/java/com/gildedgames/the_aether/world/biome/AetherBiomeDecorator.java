@@ -18,7 +18,6 @@ import org.apache.logging.log4j.Logger;
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenClouds;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenDungeonOakTree;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFloatingIsland;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFoilage;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenHolidayTree;
@@ -42,8 +41,6 @@ public class AetherBiomeDecorator extends BiomeDecorator {
     public AetherGenMinable ores = new AetherGenMinable();
 
     public AetherGenSkyrootTree skyroot_tree = new AetherGenSkyrootTree(false);
-
-    public AetherGenDungeonOakTree golden_oak_tree_dungeon = new AetherGenDungeonOakTree();
 
     public AetherGenQuicksoil quicksoil_patches = new AetherGenQuicksoil();
 
@@ -111,6 +108,10 @@ public class AetherBiomeDecorator extends BiomeDecorator {
             int z = this.chunk_Z + this.nextInt(16) + 8;
             int y = this.world.getHeightValue(x, z);
 
+            if (this.isGoldenIslandSurface(x, y, z)) {
+                continue;
+            }
+
             this.getTree()
                 .generate(this.world, this.rand, x, y, z);
         }
@@ -123,15 +124,11 @@ public class AetherBiomeDecorator extends BiomeDecorator {
                 int x = this.chunk_X + 8;
                 int z = this.chunk_Z + 8;
                 int y = this.world.getHeightValue(x, z);
-                this.holiday_tree.generate(this.world, this.rand, x, y, z);
-            }
-        }
 
-        for (int i = 0; i < 25; i++) {
-            int x = this.chunk_X + this.nextInt(16);
-            int z = this.chunk_Z + this.nextInt(16);
-            int y = this.world.getHeightValue(x, z);
-            this.golden_oak_tree_dungeon.generate(this.world, this.rand, x, y, z);
+                if (!this.isGoldenIslandSurface(x, y, z)) {
+                    this.holiday_tree.generate(this.world, this.rand, x, y, z);
+                }
+            }
         }
 
         if (AetherConfig.tallgrassEnabled()) {
@@ -183,6 +180,11 @@ public class AetherBiomeDecorator extends BiomeDecorator {
 
     public WorldGenerator getTree() {
         return this.shouldSpawn(30) ? new AetherGenOakTree() : new AetherGenSkyrootTree(true);
+    }
+
+    boolean isGoldenIslandSurface(int x, int y, int z) {
+        return this.world.getBlock(x, y - 1, z) == BlocksAether.aether_grass
+            && this.world.getBlockMetadata(x, y - 1, z) == 3;
     }
 
     public void generateFoilage(Block block) {

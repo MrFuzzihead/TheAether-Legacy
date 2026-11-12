@@ -1,15 +1,21 @@
 package com.gildedgames.the_aether.world.biome;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Random;
 
+import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import org.junit.Test;
+
+import com.gildedgames.the_aether.blocks.BlocksAether;
 
 public class AetherBiomeDecoratorTest {
 
@@ -34,5 +40,32 @@ public class AetherBiomeDecoratorTest {
 
         assertNull(decorator.world);
         assertNull(decorator.rand);
+    }
+
+    @Test
+    public void goldenIslandSurfaceRequiresMetaThree() {
+        Block oldGrass = BlocksAether.aether_grass;
+        Block grass = mock(Block.class);
+        Block other = mock(Block.class);
+        BlocksAether.aether_grass = grass;
+
+        try {
+            World world = mock(World.class);
+            AetherBiomeDecorator decorator = new AetherBiomeDecorator();
+            decorator.world = world;
+
+            when(world.getBlock(1, 2, 3)).thenReturn(grass);
+            when(world.getBlockMetadata(1, 2, 3)).thenReturn(3);
+            assertTrue(decorator.isGoldenIslandSurface(1, 3, 3));
+
+            when(world.getBlockMetadata(1, 2, 3)).thenReturn(0);
+            assertFalse(decorator.isGoldenIslandSurface(1, 3, 3));
+
+            when(world.getBlock(1, 2, 3)).thenReturn(other);
+            when(world.getBlockMetadata(1, 2, 3)).thenReturn(3);
+            assertFalse(decorator.isGoldenIslandSurface(1, 3, 3));
+        } finally {
+            BlocksAether.aether_grass = oldGrass;
+        }
     }
 }
