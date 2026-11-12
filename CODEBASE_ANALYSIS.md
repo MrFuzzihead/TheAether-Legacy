@@ -1714,7 +1714,8 @@ Status key:
 | R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
 | R07 | P05 worldgen leftovers | Partial | Generator caching completed; cloud changes deferred | Should clouds cross chunks? |
-| R08 | P06 first-person renderer / config | Decision | Leave renderer unless maintenance cost rises | How much renderer parity is required? |
+| R08a | First-person renderer duplication | Won't fix | Keep custom renderer for glove/Battlegear parity | None |
+| R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Decision | Wire with tests or remove | Are these still planned features? |
 | R11 | Feature gaps | Decision | Prioritise OreDictionary, NEI, localization | Which features are in scope? |
@@ -1846,20 +1847,32 @@ problem.
 
 ### R08 - P06 first-person renderer and config lookups
 
-**Current state:** `AetherItemRenderer` copies much of vanilla's first-person
-renderer. Some client paths repeatedly query `AetherConfig`.
+#### R08a - First-person renderer duplication
 
-**Options:**
+**Status:** won't fix.
 
-1. Replace the copied renderer with event-based first-person rendering.
-2. Keep the copied renderer for exact visual parity.
-3. Cache config values only where runtime toggles also update the cache.
+`AetherItemRenderer` copies much of vanilla's first-person renderer, but the copy
+exists for real behavior: first-person glove overlays and Battlegear offhand
+compatibility. Replacing it with event-based rendering would require reproducing
+vanilla map rendering, item-use animations, swing transforms, and compatibility
+behavior. The 1.7.10 renderer is stable, so the duplication is not causing drift
+or a correctness problem.
 
-**Recommendation:** leave the renderer alone unless it becomes a maintenance
-problem. Do not cache config values that can change at runtime unless the toggle
-path updates the cache.
+Keep the custom renderer unless a rendering bug forces a rewrite.
 
-**Decision needed:** how much visual parity with the current renderer is required?
+#### R08b - Repeated client config lookups
+
+**Status:** completed.
+
+Added `AetherConfig.setMenuEnabled(...)`, which updates both the cached value and
+the Forge config property. The menu toggle now uses it, so cached values cannot
+become stale.
+
+`AetherClientEvents`, `AetherMusicHandler`, and `GuiMenuToggleButton` now use the
+cached `menuEnabled()`, `menuButtonEnabled()`, and `musicEnabled()` getters
+instead of repeatedly resolving config properties.
+
+**Decision needed:** none.
 
 ### R09 - Unify `AetherDungeon` and `AetherStructure`
 

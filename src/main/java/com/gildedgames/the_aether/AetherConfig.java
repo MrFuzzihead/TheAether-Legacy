@@ -235,8 +235,22 @@ public class AetherConfig {
         return AetherConfig.menu_enabled;
     }
 
+    public static void setMenuEnabled(boolean enabled) {
+        AetherConfig.menu_enabled = enabled;
+
+        if (AetherConfig.config != null) {
+            AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
+                .set(enabled);
+            AetherConfig.config.save();
+        }
+    }
+
     public static boolean menuButtonEnabled() {
         return AetherConfig.menu_button;
+    }
+
+    public static boolean musicEnabled() {
+        return AetherConfig.toggle_music;
     }
 
     public static boolean installResourcepack() {
