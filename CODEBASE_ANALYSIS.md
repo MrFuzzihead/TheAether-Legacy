@@ -107,9 +107,9 @@ does this for `BattlegearClientEventHandler`).
 | Category | Result |
 |---|---|
 | Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
-| Mixins | **One early client mixin.** `usesMixins = true`, `mixinsPackage = mixins`, and `coreModClass = mixins.EarlyMixinsLoader`. The base `mixins.aether_legacy.json` is the manifest bootstrap; the early loader registers `mixins.aether_legacy.early.json`, which loads `GuiContainerCreativeMixin`. It replaces the creative-tab `buttonList` reflection. |
-| ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
-| Reflection | **Reduced:** 1 remaining site (`EntityRenderer.itemRenderer`). The Desktop link uses `java.awt.Desktop` directly, and the creative-tab `buttonList` access now uses an early client mixin. The original audit inventory below is preserved for context. |
+| Mixins | **Two early client mixins.** `usesMixins = true`, `mixinsPackage = mixins`, and `coreModClass = mixins.EarlyMixinsLoader`. The base `mixins.aether_legacy.json` is the manifest bootstrap; the early loader registers `mixins.aether_legacy.early.json`, which loads `GuiContainerCreativeMixin` and `EntityRendererMixin`. |
+| ASM / coremod | **No custom ASM transformers.** `EarlyMixinsLoader` implements `IFMLLoadingPlugin` only as the GTNH early-mixin loader. There are no `org.objectweb.asm` imports, `ClassReader`/`ClassWriter`/`ClassVisitor` classes, or `IClassTransformer` implementations. |
+| Reflection | **None remaining in project code.** The Desktop link uses `java.awt.Desktop` directly; the creative-tab `buttonList` access and `EntityRenderer.itemRenderer` assignment now use early client mixins. The original audit inventory below is preserved for context. |
 
 The classpath does contain `org.ow2.asm:asm-debug-all:5.0.3` transitively from
 Minecraft/FML. That is a library dependency required by Forge/launchwrapper, not
@@ -124,7 +124,7 @@ already satisfies it.
 | `PlayerAether.java:262-263` | 2 per player per tick | `EntityLivingBase.isJumping` via `ReflectionHelper.getPrivateValue(..., "isJumping", "field_70703_bu")`. | This is a **hot path** and a mapping-sensitive reflection lookup. There is no public getter in 1.7.10. Options: (a) track jump on the client from `EntityPlayerSP.movementInput.jump` and send a small packet/player-data field to the server; (b) add a narrow AT or mixin; (c) cache the reflected field at least. Pure API removal is difficult without an AT/mixin/packet. |
 | `AetherClientEvents.java:313-320` | 4 per GUI open | `GuiContainer.guiLeft`, `guiTop`, `xSize`, `ySize` via `ObfuscationReflectionHelper.getPrivateValue(...)`. These are `protected` in the MCP source. | Avoid for `GuiInventory`: the vanilla dimensions are known (`176 x 166`) and the position can be computed from `event.gui.width/height`. For other `GuiContainer`s, use the public screen dimensions or a small layout hook. Because the fields are `protected`, an unrelated event handler cannot read them directly. |
 | `AetherClientEvents.java` creative-tab handler | **Removed** | `GuiScreen.buttonList` via indexed reflection, plus `guiLeft/guiTop` again. | **Resolved.** `GuiContainerCreativeMixin` injects at the tail of `setCurrentCreativeTab` and updates the button list directly. |
-| `AetherEntityRenderer.java:34` | 1 at client startup | `EntityRenderer.itemRenderer` (`field_78516_c` / index 7). | The field is `public final` in the MCP source; reflection is only needed to assign the final field. Prefer a custom first-person item renderer via `RenderHandEvent`/`IItemRenderer` or per-item rendering. If that cannot reproduce the behavior, a single narrow AT to remove `final` is less fragile than indexed reflection, though it violates the “avoid AT” preference. |
+| `AetherEntityRenderer.java` constructor | **Removed** | `EntityRenderer.itemRenderer` (`field_78516_c` / index 7). | **Resolved.** `EntityRendererMixin` mutates the final field at the tail of the `EntityRenderer` constructor, only when the instance is an `AetherEntityRenderer`. |
 | `EntitiesAether.java:138-150` | 2 per spawn-egg spawn | `Class.getConstructor(World.class).newInstance(world)`. | Replace with an explicit `Map<Integer, Function<World, Entity>>` factory (or a `switch` on the ID). This also avoids the repeated exception path and makes entity registration easier to validate. |
 | `AetherMainMenu.java` confirm handler | **Removed** | `java.awt.Desktop` reflective lookup, method lookup, and invocation. | **Resolved.** Uses `Desktop.isDesktopSupported()`, `Desktop.Action.BROWSE`, and direct `browse` with checked exception logging. |
 
@@ -1599,11 +1599,11 @@ Removed:
 - **Entity construction** — `EntitiesAether.createEntityByID` uses an explicit
   ID switch instead of `Class.getConstructor(...).newInstance(...)`.
 
-Remaining reflection is intentionally deferred:
+All previously audited reflection sites are now resolved:
 
-- `EntityRenderer.itemRenderer` final-field assignment.
-
-The `AetherMainMenu` Desktop link now uses the direct `java.awt.Desktop` API.
+- The `AetherMainMenu` Desktop link uses the direct `java.awt.Desktop` API.
+- Creative-tab button access uses `GuiContainerCreativeMixin`.
+- `EntityRenderer.itemRenderer` assignment uses `EntityRendererMixin`.
 
 The baseline is now **129/129 in-game checks** and **60 unit tests**.
 
@@ -1710,7 +1710,7 @@ Status key:
 | R01 | B29 dungeon oak / golden-island vegetation | Done | Golden oaks restored; default trees suppressed; dead lake code removed | None |
 | R02 | Floating-island tautologies | Done | Early exit added; canopy shape unchanged | None |
 | R03 | Creative `buttonList` reflection | Done | Early client mixin replaces reflection and polling | None |
-| R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
+| R04 | `EntityRenderer.itemRenderer` reflection | Done | Early client mixin mutates the final field only for AetherEntityRenderer | None |
 | R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
 | R07 | P05 worldgen leftovers | Mixed | Apply safe early exit and generator caching; defer cloud bounds | Should clouds cross chunks? |
@@ -1771,21 +1771,18 @@ accessories-screen button paths remain event-based.
 
 ### R04 - `EntityRenderer.itemRenderer` reflection
 
-**Current state:** `AetherEntityRenderer` reflectively sets the final
-`itemRenderer` field to install `AetherItemRenderer`.
+**Status:** completed with an early client mixin.
 
-**Options:**
+`EntityRendererMixin` injects at the tail of the `EntityRenderer` constructor.
+When the instance is an `AetherEntityRenderer`, it replaces the final
+`itemRenderer` field with `AetherItemRenderer`. Vanilla and other mods'
+`EntityRenderer` instances keep their original renderer.
 
-1. Move first-person glove/item rendering to `RenderHandEvent` and stop replacing
-   `itemRenderer`.
-2. Add a narrow access transformer removing `final` from `itemRenderer`.
-3. Keep the reflection.
+The reflection call and `ObfuscationReflectionHelper` import were removed from
+`AetherEntityRenderer`.
 
-**Recommendation:** event-based rendering long-term. If exact glove/Battlegear
-parity is required in the short term, use one narrow AT rather than a full
-renderer rewrite.
-
-**Decision needed:** how much visual parity is required, and is one AT acceptable?
+**Decision needed:** none. Event-based first-person rendering remains a possible
+future refactor, but it is no longer needed to remove reflection.
 
 ### R05 - `AetherMainMenu` Desktop reflection - completed
 
