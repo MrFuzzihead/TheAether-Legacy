@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.client.gui.menu;
 
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -249,13 +250,19 @@ public class AetherMainMenu extends GuiMainMenu {
     public void confirmClicked(boolean p_73878_1_, int p_73878_2_) {
         if (p_73878_2_ == 13 && p_73878_1_) {
             try {
-                Class oclass = Class.forName("java.awt.Desktop");
-                Object object = oclass.getMethod("getDesktop", new Class[0])
-                    .invoke((Object) null, new Object[0]);
-                oclass.getMethod("browse", new Class[] { URI.class })
-                    .invoke(object, new Object[] { new URI(this.field_104024_v) });
-            } catch (Throwable throwable) {
-                logger.error("Couldn't open link", throwable);
+                if (Desktop.isDesktopSupported()) {
+                    Desktop desktop = Desktop.getDesktop();
+
+                    if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                        desktop.browse(new URI(this.field_104024_v));
+                    } else {
+                        logger.warn("Desktop browsing is not supported");
+                    }
+                } else {
+                    logger.warn("Desktop API is not supported");
+                }
+            } catch (Exception exception) {
+                logger.error("Couldn't open link", exception);
             }
 
             this.mc.displayGuiScreen(this);

@@ -109,7 +109,7 @@ does this for `BattlegearClientEventHandler`).
 | Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
 | Mixins | **None.** `usesMixins = false`, no mixin JSON, no `mixinsPackage`, no `@Shadow`/`@Inject`/`@Redirect` classes. |
 | ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
-| Reflection | **Reduced:** 3 remaining sites (creative `buttonList`, `EntityRenderer.itemRenderer`, `Desktop` link). The original audit inventory below is preserved for context. |
+| Reflection | **Reduced:** 2 remaining sites (creative `buttonList`, `EntityRenderer.itemRenderer`). The Desktop link now uses `java.awt.Desktop` directly. The original audit inventory below is preserved for context. |
 
 The classpath does contain `org.ow2.asm:asm-debug-all:5.0.3` transitively from
 Minecraft/FML. That is a library dependency required by Forge/launchwrapper, not
@@ -126,7 +126,7 @@ already satisfies it.
 | `AetherClientEvents.java:390-398` | 3 on creative-tab changes | `GuiScreen.buttonList` via indexed reflection, plus `guiLeft/guiTop` again. | Use `GuiScreenEvent.InitGuiEvent.Post#buttonList` where possible. The creative-tab switch is the awkward case: the button list is `protected` and there is no public event accessor. A clean fix is a small `GuiContainerCreative` integration/subclass or a dedicated button manager; otherwise one narrow AT for `buttonList` may be preferable to indexed reflection. |
 | `AetherEntityRenderer.java:34` | 1 at client startup | `EntityRenderer.itemRenderer` (`field_78516_c` / index 7). | The field is `public final` in the MCP source; reflection is only needed to assign the final field. Prefer a custom first-person item renderer via `RenderHandEvent`/`IItemRenderer` or per-item rendering. If that cannot reproduce the behavior, a single narrow AT to remove `final` is less fragile than indexed reflection, though it violates the “avoid AT” preference. |
 | `EntitiesAether.java:138-150` | 2 per spawn-egg spawn | `Class.getConstructor(World.class).newInstance(world)`. | Replace with an explicit `Map<Integer, Function<World, Entity>>` factory (or a `switch` on the ID). This also avoids the repeated exception path and makes entity registration easier to validate. |
-| `AetherMainMenu.java:274-278` | 3 when opening the “old OpenGL” help link | `Class.forName("java.awt.Desktop")`, `getMethod`, `invoke`. | Not obfuscation-related and unnecessary: this is client-only code. Use `java.awt.Desktop` directly behind `GraphicsEnvironment.isHeadless()`/`Desktop.isDesktopSupported()` checks, or use a safer GUI link helper. |
+| `AetherMainMenu.java` confirm handler | **Removed** | `java.awt.Desktop` reflective lookup, method lookup, and invocation. | **Resolved.** Uses `Desktop.isDesktopSupported()`, `Desktop.Action.BROWSE`, and direct `browse` with checked exception logging. |
 
 ### Reflection-free replacement sketch for dungeon keys
 
@@ -1603,7 +1603,8 @@ Remaining reflection is intentionally deferred:
 
 - Creative-inventory `GuiScreen.buttonList`.
 - `EntityRenderer.itemRenderer` final-field assignment.
-- `AetherMainMenu` `java.awt.Desktop` reflective link opening.
+
+The `AetherMainMenu` Desktop link now uses the direct `java.awt.Desktop` API.
 
 The baseline is now **129/129 in-game checks** and **60 unit tests**.
 
@@ -1701,6 +1702,7 @@ Status key:
 - **Decision** - needs a product, worldgen, or compatibility decision.
 - **Deferred** - deliberately postponed until a later batch.
 - **Won't fix** - not worth the behavior/performance tradeoff.
+- **Done** - completed and verified.
 
 | ID | Item | Status | Recommendation | Main decision |
 |---|---|---|---|---|
@@ -1708,7 +1710,7 @@ Status key:
 | R02 | Floating-island tautologies | Decision | Add early-exit optimization now; decide shape separately | Is the current shape intentional? |
 | R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
 | R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
-| R05 | Desktop reflection | Safe | Use `java.awt.Desktop` directly | None |
+| R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
 | R07 | P05 worldgen leftovers | Mixed | Apply safe early exit and generator caching; defer cloud bounds | Should clouds cross chunks? |
 | R08 | P06 first-person renderer / config | Decision | Leave renderer unless maintenance cost rises | How much renderer parity is required? |
@@ -1794,20 +1796,20 @@ renderer rewrite.
 
 **Decision needed:** how much visual parity is required, and is one AT acceptable?
 
-### R05 - `AetherMainMenu` Desktop reflection
+### R05 - `AetherMainMenu` Desktop reflection - completed
 
-**Current state:** link opening uses `Class.forName("java.awt.Desktop")` and
+**Previous state:** link opening used `Class.forName("java.awt.Desktop")` and
 reflective method invocation.
 
-**Options:**
+**Implemented:** direct `java.awt.Desktop` usage with
+`Desktop.isDesktopSupported()` and `Desktop.Action.BROWSE` checks. Unsupported
+platforms are logged instead of throwing, and link-opening failures are still
+reported through the existing logger.
 
-1. Use `java.awt.Desktop` directly with `Desktop.isDesktopSupported()` and
-   `Action.BROWSE` checks.
-2. Keep the reflection.
+**Result:** removed all reflection from the link-opening path. This was
+client-only code with no gameplay effect.
 
-**Recommendation:** option 1. This is client-only code with no gameplay effect.
-
-**Decision needed:** none, other than approving direct AWT usage.
+**Decision needed:** none.
 
 ### R06 - P03 `EntityHook` target checks
 
