@@ -1686,3 +1686,260 @@ baseline is now **129/129 in-game checks** and **66 unit tests**.
   and writes one `Property` instance instead of querying the config repeatedly.
 
 The baseline remains **129/129 in-game checks** and **66 unit tests**.
+
+---
+
+## 11. Remaining Work Decision Register
+
+This section tracks every item intentionally left open after the refactor,
+reflection, performance, and dead-code batches. The batch-status sections above
+are historical; this is the current remaining-work register.
+
+Status key:
+
+- **Safe** - can be changed without a gameplay/worldgen/API decision.
+- **Decision** - needs a product, worldgen, or compatibility decision.
+- **Deferred** - deliberately postponed until a later batch.
+- **Won't fix** - not worth the behavior/performance tradeoff.
+
+| ID | Item | Status | Recommendation | Main decision |
+|---|---|---|---|---|
+| R01 | B29 dungeon oak / golden-island vegetation | Decision | Restore golden-island trees/lakes; remove surface attempts | Should golden islands be vegetated? |
+| R02 | Floating-island tautologies | Decision | Add early-exit optimization now; decide shape separately | Is the current shape intentional? |
+| R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
+| R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
+| R05 | Desktop reflection | Safe | Use `java.awt.Desktop` directly | None |
+| R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
+| R07 | P05 worldgen leftovers | Mixed | Apply safe early exit and generator caching; defer cloud bounds | Should clouds cross chunks? |
+| R08 | P06 first-person renderer / config | Decision | Leave renderer unless maintenance cost rises | How much renderer parity is required? |
+| R09 | Unify dungeon base classes | Deferred | Leave both documented classes unless adding dungeons | Is the rewrite worth it? |
+| R10 | Dialogue/perk scaffolding | Decision | Wire with tests or remove | Are these still planned features? |
+| R11 | Feature gaps | Decision | Prioritise OreDictionary, NEI, localization | Which features are in scope? |
+
+### R01 - B29 and golden-island vegetation
+
+**Current state:** `AetherGenDungeonOakTree` only accepts `aether_grass` metadata
+`3`. The surface decorator calls it 25 times per chunk on normal grass, so those
+attempts always fail. Golden-island components do use meta-3 grass, but their
+tree and lake generation is commented out.
+
+**Options:**
+
+1. Restore golden-island trees and lakes using
+   `AetherGenUtils.generateGoldenOakTree(...)` and the structure-compatible lake
+   path, then remove the 25 surface attempts.
+2. Allow the generator to accept normal grass metadata `0`, which would place
+   golden oaks on the surface.
+3. Remove `AetherGenDungeonOakTree` and accept barren golden islands.
+
+**Recommendation:** option 1. It matches the existing metadata usage and the
+commented generation code, and removes wasted surface decoration work.
+
+**Decision needed:** should golden islands contain golden oaks and lakes? Should
+surface dungeon oaks remain, or should the 25-per-chunk surface attempts be
+removed?
+
+### R02 - `AetherGenFloatingIsland` tautologies and scan cost
+
+**Current state:** conditions such as `if (z != 0 || z != 1)` always evaluate
+true. The generator also scans roughly 7,400 blocks and continues scanning after
+the first non-air block is found.
+
+**Options:**
+
+1. Change `||` to `&&` to skip the intended offsets.
+2. Replace the conditions with explicit offset sets or a small shape table.
+3. Leave the generated shape alone and add an early exit when the first non-air
+   block is found.
+
+**Recommendation:** apply option 3 now. It is behavior-preserving and removes
+most of the cost when an island cannot generate. Decide the intended island
+shape before changing the tautologies.
+
+**Decision needed:** is the current full-row/column placement intentional, or
+were specific offsets meant to be excluded?
+
+### R03 - Creative-inventory `buttonList` reflection
+
+**Current state:** `AetherClientEvents` reflectively reads
+`GuiScreen.buttonList` when the creative tab changes.
+
+**Options:**
+
+1. Replace the creative screen with a small `GuiContainerCreative` subclass that
+   exposes the button list and handles tab changes.
+2. Add one narrow access transformer for `GuiScreen.buttonList`.
+3. Keep the current isolated reflection.
+
+**Recommendation:** option 2 unless the no-AT rule is absolute. The custom-screen
+route is a larger lifecycle change for one accessory button.
+
+**Decision needed:** is a single narrowly scoped access transformer acceptable?
+
+### R04 - `EntityRenderer.itemRenderer` reflection
+
+**Current state:** `AetherEntityRenderer` reflectively sets the final
+`itemRenderer` field to install `AetherItemRenderer`.
+
+**Options:**
+
+1. Move first-person glove/item rendering to `RenderHandEvent` and stop replacing
+   `itemRenderer`.
+2. Add a narrow access transformer removing `final` from `itemRenderer`.
+3. Keep the reflection.
+
+**Recommendation:** event-based rendering long-term. If exact glove/Battlegear
+parity is required in the short term, use one narrow AT rather than a full
+renderer rewrite.
+
+**Decision needed:** how much visual parity is required, and is one AT acceptable?
+
+### R05 - `AetherMainMenu` Desktop reflection
+
+**Current state:** link opening uses `Class.forName("java.awt.Desktop")` and
+reflective method invocation.
+
+**Options:**
+
+1. Use `java.awt.Desktop` directly with `Desktop.isDesktopSupported()` and
+   `Action.BROWSE` checks.
+2. Keep the reflection.
+
+**Recommendation:** option 1. This is client-only code with no gameplay effect.
+
+**Decision needed:** none, other than approving direct AWT usage.
+
+### R06 - P03 `EntityHook` target checks
+
+**Current state:** `EntityHook` checks `getAttackTarget()`, `getEntityToAttack()`,
+and `getAITarget()` separately. These are distinct fields.
+
+**Options:**
+
+1. Keep all three checks; the per-check `ItemStack` allocation has already been
+   removed with `wearingAccessory(Item)`.
+2. Merge to one target check; faster but changes which AI targets are cleared.
+3. Add a helper that preserves all three fields while reducing repeated player
+   lookups.
+
+**Recommendation:** keep all three. The remaining cost is small and merging them
+would change AI behavior.
+
+**Decision needed:** none; mark this as won't-fix unless profiling shows a real
+problem.
+
+### R07 - P05 remaining worldgen work
+
+**Current state:**
+
+- `AetherGenFloatingIsland` still has a full-volume air scan.
+- `AetherGenClouds` can drift outside the current chunk and uses
+  `setBlockAndNotifyAdequately` for every cloud block.
+- `AetherBiomeDecorator` allocates new tree/lake generators during decoration.
+- Golden islands are barren and `AetherGenDungeonOakTree` is unused at its
+  current call site.
+
+**Options:**
+
+1. Add an early exit to the floating-island scan and cache tree/lake generators.
+   These do not change generated output.
+2. Clip clouds to chunk bounds. This changes where clouds appear.
+3. Complete golden-island vegetation/lakes (see R01).
+4. Use a lighter block setter for clouds. This may change notification behavior
+   during generation.
+
+**Recommendation:** apply option 1 now. Defer cloud clipping and block-setter
+changes until the intended cloud distribution is decided.
+
+**Decision needed:** should clouds be allowed to cross chunk boundaries, and what
+should golden islands contain?
+
+### R08 - P06 first-person renderer and config lookups
+
+**Current state:** `AetherItemRenderer` copies much of vanilla's first-person
+renderer. Some client paths repeatedly query `AetherConfig`.
+
+**Options:**
+
+1. Replace the copied renderer with event-based first-person rendering.
+2. Keep the copied renderer for exact visual parity.
+3. Cache config values only where runtime toggles also update the cache.
+
+**Recommendation:** leave the renderer alone unless it becomes a maintenance
+problem. Do not cache config values that can change at runtime unless the toggle
+path updates the cache.
+
+**Decision needed:** how much visual parity with the current renderer is required?
+
+### R09 - Unify `AetherDungeon` and `AetherStructure`
+
+**Current state:** `AetherDungeon` is a `WorldGenerator` using absolute
+coordinates; `AetherStructure` is a `StructureComponent` using bounding-box
+coordinates and metadata.
+
+**Options:**
+
+1. Extract shared geometry into a callback/adapter helper.
+2. Leave both classes and document the boundary.
+3. Rewrite one in terms of the other.
+
+**Recommendation:** leave both as-is unless new dungeon types are planned. The
+rewrite is large and the regression surface is mostly worldgen.
+
+**Decision needed:** is reducing this duplication worth a structural rewrite?
+
+### R10 - Dialogue and perk scaffolding
+
+**Current state:**
+
+- `PacketDisplayDialogue`, `PacketDialogueClicked`, and `GuiServerDialogue` exist
+  but have no sender.
+- `GuiAetherPerks` is unreachable because its only button is commented out.
+- Some NBT/public legacy fields are retained for compatibility.
+
+**Options:**
+
+1. Wire generic dialogue into a server-side dialogue registry/API.
+2. Wire `GuiAetherPerks` into the accessories screen.
+3. Remove both features and their supporting classes.
+4. Keep as documented scaffolding for future work.
+
+**Recommendation:** make an explicit product decision per feature. Either commit
+to wiring them with tests, or remove them. Avoid leaving ambiguous scaffolding
+indefinitely.
+
+**Decision needed:** are generic dialogue and donator-perk customization still
+planned features?
+
+### R11 - Feature gaps
+
+Still open from section 7:
+
+- OreDictionary coverage beyond `stickWood`.
+- Optional NEI recipe handlers.
+- Golden-island vegetation and lakes.
+- Generic dialogue wiring.
+- Donator-perk UI wiring.
+- Config validation for IDs/spawn rates.
+- Data-driven dungeon loot tables.
+- Boss-arena state cleanup beyond the current fixes.
+- Localization coverage beyond `en_US`.
+- Further pure-logic tests and CI expansion.
+
+**Recommendation:** prioritise low-risk mechanical work first: OreDictionary
+entries, optional NEI handlers, and localization. Treat loot tables and boss-arena
+state as separate feature batches.
+
+**Decision needed:** which of these are in scope for this project cycle?
+
+### R12 - Optional dependency follow-up
+
+The dependency versions are current and the optional Battlegear reference has
+been moved into a compatibility class. Remaining minor notes:
+
+- `dependencies.gradle` comments still mention older Gradle versions.
+- GTNHLib is pulled transitively by both Battlegear and NEI; consider a version
+  constraint if reproducible resolution becomes important.
+
+**Recommendation:** documentation-only cleanup unless dependency resolution
+problems appear.
