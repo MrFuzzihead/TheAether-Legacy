@@ -1719,7 +1719,7 @@ Status key:
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
-| R11 | Feature gaps | Decision | Prioritise OreDictionary, NEI, localization | Which features are in scope? |
+| R11 | Feature gaps | Decision | Start with OreDictionary + localization, then config validation | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
 
@@ -1913,21 +1913,144 @@ system remains: `PacketPerkChanged`, `GuiCustomizationScreen`, `AetherRankings`,
 
 **Decision needed:** none.
 
-### R11 - Feature gaps
+### R11 - Feature gaps and recommended order
 
-Still open from section 7:
+R11 mixes small compatibility work with large gameplay refactors. The current
+scope is:
 
-- OreDictionary coverage beyond `stickWood`.
-- Optional NEI recipe handlers.
-- Config validation for IDs/spawn rates.
-- Data-driven dungeon loot tables.
-- Boss-arena state cleanup beyond the current fixes.
-- Localization coverage beyond `en_US`.
-- Further pure-logic tests and CI expansion.
+| Item | Current state | Effort | Risk |
+|---|---|---:|---:|
+| OreDictionary coverage | Only `stickWood` is registered | Low | Low |
+| Optional NEI handlers | No NEI integration beyond the runtime dependency | Medium | Low-medium |
+| Config validation | IDs and spawn rates are loaded without validation | Low-medium | Medium |
+| Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
+| Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
+| Localization beyond `en_US` | Every non-English file is missing the same 9 keys | Low | Low |
+| More tests / CI | Unit tests, game tests, and CI already exist | Ongoing | Low |
 
-**Recommendation:** prioritise low-risk mechanical work first: OreDictionary
-entries, optional NEI handlers, and localization. Treat loot tables and boss-arena
-state as separate feature batches.
+#### OreDictionary coverage
+
+Currently only `stickWood` is registered for `ItemsAether.skyroot_stick`.
+
+Add compatibility tags for:
+
+- `logWood` - skyroot and golden oak logs, using metadata wildcards.
+- `plankWood` - skyroot planks.
+- `stickWood` - already present.
+- `treeSapling` - skyroot and golden oak saplings.
+- `treeLeaves` - Aether leaves.
+- Possibly `oreAmbrosium`, `oreZanite`, `oreGravitite`.
+- Possibly `gemAmbrosium`, `gemZanite`, `gemGravitite`.
+
+This is the smallest, highest-value compatibility task. Add a game-test check
+that each expected tag contains the expected item.
+
+#### Optional NEI handlers
+
+There are no NEI recipe handlers today. The useful targets are:
+
+- Enchanter recipes from the `AetherEnchantment` registry.
+- Freezer recipes from the `AetherFreezable` registry.
+- Incubator recipes only if there is a meaningful recipe representation.
+
+This needs a compile-time NEI API dependency, a compatibility plugin loaded only
+when NEI is present, and guarded imports so NEI remains optional.
+
+#### Config validation
+
+Current risks:
+
+- Spawn rates can be set to `0`, causing `nextInt(0)` crashes.
+- Biome IDs can be outside the valid range.
+- Potion IDs can conflict or be out of range.
+- Dimension IDs can conflict with reserved or other mod dimensions.
+
+Recommended validation:
+
+- Clamp spawn rates to at least `1`.
+- Validate biome IDs against `0..255`.
+- Validate potion IDs and avoid occupied IDs where possible.
+- Warn on dimension conflicts; only fall back silently for values that are
+  definitely invalid.
+- Log clear warnings instead of crashing during registration.
+
+Dimension IDs need care because changing them can affect existing worlds. Warn
+rather than silently migrate.
+
+#### Data-driven dungeon loot tables
+
+Current dungeon loot is hardcoded in:
+
+- `BronzeDungeon.getBronzeLoot`
+- `ComponentSilverDungeon.getSilverLoot`
+- `ComponentGoldenDungeon.getGoldLoot`
+
+There are also fall-through bugs in the silver/gold switches.
+
+A data-driven system would need:
+
+- A JSON or NBT schema for entries, weights, stack sizes, and conditions.
+- A loader that runs after items are registered.
+- A fallback to the built-in tables if data is missing or invalid.
+- Tests for weighted selection, empty tables, and invalid entries.
+
+Fix the hardcoded loot behavior first by extracting it into a small code-level
+table structure, then add JSON loading as a separate feature.
+
+#### Boss-arena state cleanup
+
+The Slider, Valkyrie Queen, and Sun Spirit each manage parts of their arena
+directly:
+
+- Door/trapdoor changes.
+- Locked-block unlocking.
+- Achievement/message triggering.
+- Focused-boss state.
+- Death and despawn cleanup.
+
+The long-term fix is an explicit per-arena state machine, for example
+`DORMANT -> ACTIVE -> DEFEATED -> RESET`, with idempotent transitions persisted
+in NBT. This is the riskiest gameplay refactor and needs extensive in-game tests.
+
+#### Localization beyond `en_US`
+
+Every non-English language file is missing the same nine keys:
+
+- `gui.aether_menu.info`
+- `gui.aether_menu.mods`
+- `gui.lore.book`
+- `gui.lore.item`
+- `gui.lore.next`
+- `gui.lore.of_lore`
+- `gui.lore.previous`
+- `gui.sun_altar.select_time`
+- `gui.sun_altar.title`
+
+Minecraft normally falls back to English, so this is not a crash. Add a
+key-parity test and fill the missing entries. If real translations are
+unavailable, use English fallback text and mark them for later translation.
+
+#### Tests and CI
+
+The project already has unit tests, a dedicated game-test server, and build/test,
+game-test, and release workflows. The remaining work is feature-specific coverage:
+
+- OreDictionary registration checks.
+- Config validation tests.
+- Loot table selection tests.
+- More boss-arena game tests.
+
+#### Recommended order
+
+1. OreDictionary integration - small, useful, low risk.
+2. Localization key parity - mechanical and quick.
+3. Config validation - prevents crashes and is testable.
+4. Optional NEI handlers - compatibility work with more setup.
+5. Loot table extraction/refactor - fix behavior first, then data-drive it.
+6. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+
+Start with OreDictionary plus the missing localization keys as one small batch,
+then move to config validation.
 
 **Decision needed:** which of these are in scope for this project cycle?
 
