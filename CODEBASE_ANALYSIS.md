@@ -1719,7 +1719,7 @@ Status key:
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
-| R11 | Feature gaps | Decision | OreDictionary + localization done; config validation next | Which features are in scope? |
+| R11 | Feature gaps | Decision | OreDictionary, localization, and config validation done; NEI next | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
 
@@ -1922,7 +1922,7 @@ scope is:
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
 | Optional NEI handlers | No NEI integration beyond the runtime dependency | Medium | Low-medium |
-| Config validation | IDs and spawn rates are loaded without validation | Low-medium | Medium |
+| Config validation | Done: IDs and spawn rates are range-checked and clamped | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
 | Localization beyond `en_US` | Done: all language files share the `en_US` key set | Low | Low |
@@ -1958,24 +1958,22 @@ when NEI is present, and guarded imports so NEI remains optional.
 
 #### Config validation
 
-Current risks:
+**Status:** completed.
 
-- Spawn rates can be set to `0`, causing `nextInt(0)` crashes.
-- Biome IDs can be outside the valid range.
-- Potion IDs can conflict or be out of range.
-- Dimension IDs can conflict with reserved or other mod dimensions.
+`AetherConfig` now validates loaded values before registration:
 
-Recommended validation:
+- Spawn rates are clamped to at least `1`, preventing `nextInt(0)` crashes.
+- The Aether dimension ID must be greater than `1`; otherwise it falls back to `4`.
+- The Aether biome ID must be in `0..255`; otherwise it falls back to `127`.
+- The Inebriation potion ID must be in the valid potion range; otherwise it falls
+  back to `31`.
+- Maximum life shards must be at least `1`; otherwise they fall back to `10`.
 
-- Clamp spawn rates to at least `1`.
-- Validate biome IDs against `0..255`.
-- Validate potion IDs and avoid occupied IDs where possible.
-- Warn on dimension conflicts; only fall back silently for values that are
-  definitely invalid.
-- Log clear warnings instead of crashing during registration.
+Invalid values are logged instead of crashing. Dimension IDs still need care
+because changing them can affect existing worlds; the validator only falls back
+for definitely invalid values and does not silently migrate valid values.
 
-Dimension IDs need care because changing them can affect existing worlds. Warn
-rather than silently migrate.
+Unit coverage was added for each validator.
 
 #### Data-driven dungeon loot tables
 
@@ -2027,22 +2025,21 @@ improved separately, but key coverage is now complete.
 #### Tests and CI
 
 The project already has unit tests, a dedicated game-test server, and build/test,
-game-test, and release workflows. The remaining work is feature-specific coverage:
+game-test, and release workflows. OreDictionary registration, localization key
+parity, and config validation now have coverage. Remaining feature-specific tests:
 
-- OreDictionary registration checks.
-- Config validation tests.
 - Loot table selection tests.
+- NEI handler tests when handlers are added.
 - More boss-arena game tests.
 
 #### Recommended order
 
-1. Config validation - prevents crashes and is testable.
-2. Optional NEI handlers - compatibility work with more setup.
-3. Loot table extraction/refactor - fix behavior first, then data-drive it.
-4. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+1. Optional NEI handlers - compatibility work with more setup.
+2. Loot table extraction/refactor - fix behavior first, then data-drive it.
+3. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
 
-OreDictionary coverage and localization key parity are complete. Config
-validation is the next recommended task.
+OreDictionary coverage, localization key parity, and config validation are
+complete. Optional NEI handlers are the next recommended task.
 
 **Decision needed:** which of these are in scope for this project cycle?
 

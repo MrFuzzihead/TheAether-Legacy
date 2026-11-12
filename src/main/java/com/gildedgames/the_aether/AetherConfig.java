@@ -5,7 +5,12 @@ import java.io.IOException;
 
 import net.minecraftforge.common.config.Configuration;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class AetherConfig {
+
+    private static final Logger logger = LogManager.getLogger();
 
     public static Configuration config;
 
@@ -180,7 +185,73 @@ public class AetherConfig {
             .get("Spawnrates", "Whirlwind Spawnrate. 1 is always, higher numbers decrease chances.", 55)
             .getInt(55);
 
+        validateLoadedValues();
+
         config.save();
+    }
+
+    private static void validateLoadedValues() {
+        aether_dimension_id = validateDimensionId(aether_dimension_id);
+        aether_biome_id = validateBiomeId(aether_biome_id);
+        inebriation_id = validatePotionId(inebriation_id);
+        max_life_shards = validateMaxLifeShards(max_life_shards);
+
+        phyg_spawnrate = validateSpawnRate("Phyg", phyg_spawnrate);
+        flyingcow_spawnrate = validateSpawnRate("Flying Cow", flyingcow_spawnrate);
+        sheepuff_spawnrate = validateSpawnRate("Sheepuff", sheepuff_spawnrate);
+        aerbunny_spawnrate = validateSpawnRate("Aerbunny", aerbunny_spawnrate);
+        moa_spawnrate = validateSpawnRate("Moa", moa_spawnrate);
+        aerwhale_spawnrate = validateSpawnRate("Aerwhale", aerwhale_spawnrate);
+        zephyr_spawnrate = validateSpawnRate("Zephyr", zephyr_spawnrate);
+        cockatrice_spawnrate = validateSpawnRate("Cockatrice", cockatrice_spawnrate);
+        swet_spawnrate = validateSpawnRate("Swet", swet_spawnrate);
+        aechorplant_spawnrate = validateSpawnRate("Aechor Plant", aechorplant_spawnrate);
+        whirlwind_spawnrate = validateSpawnRate("Whirlwind", whirlwind_spawnrate);
+    }
+
+    static int validateDimensionId(int value) {
+        if (value <= 1) {
+            logger.warn("Invalid Aether dimension ID {}; using default 4", value);
+            return 4;
+        }
+
+        return value;
+    }
+
+    static int validateBiomeId(int value) {
+        if (value < 0 || value >= 256) {
+            logger.warn("Invalid Aether biome ID {}; using default 127", value);
+            return 127;
+        }
+
+        return value;
+    }
+
+    static int validatePotionId(int value) {
+        if (value < 1 || value >= net.minecraft.potion.Potion.potionTypes.length) {
+            logger.warn("Invalid Inebriation potion ID {}; using default 31", value);
+            return 31;
+        }
+
+        return value;
+    }
+
+    static int validateMaxLifeShards(int value) {
+        if (value < 1) {
+            logger.warn("Invalid maximum life shards {}; using default 10", value);
+            return 10;
+        }
+
+        return value;
+    }
+
+    static int validateSpawnRate(String name, int value) {
+        if (value < 1) {
+            logger.warn("Invalid {} spawn rate {}; using 1", name, value);
+            return 1;
+        }
+
+        return value;
     }
 
     public static int getAetherDimensionID() {
