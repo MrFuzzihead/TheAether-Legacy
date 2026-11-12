@@ -1606,3 +1606,29 @@ Remaining reflection is intentionally deferred:
 - `AetherMainMenu` `java.awt.Desktop` reflective link opening.
 
 The baseline is now **129/129 in-game checks** and **60 unit tests**.
+
+### Performance batch 1 status
+
+Completed:
+
+- **P01** — resolved by the jump-state packet; the per-tick reflective
+  `isJumping` lookup is gone.
+- **P02** — `AetherData` keeps eternal-day, cycle-catchup and Aether time in
+  memory; NBT is read on load and written on save/change.
+- **P03 (partial)** — Whirlwind’s per-entity block/leaf checks now run once per
+  whirlwind tick, and its particle cleanup iterates backwards. `EntityHook` uses
+  a no-allocation `wearingAccessory(Item)` overload.
+- **P04** — the life-shard packet is now sent only to the owning player, including
+  the max-shard branch.
+- **P07** — resolved by the typed `AetherRegistry` work.
+- **P08** — trivia files are parsed once per language and cached.
+
+Still open:
+
+- **P03** — `EntityFloatingBlock` still scans nearby entities every tick;
+  `EntityHook` still performs three separate target checks.
+- **P05** — worldgen issues, including the deferred B29 work.
+- **P06** — first-person renderer duplication, mouse-event state, and repeated
+  config lookups.
+
+The baseline is now **129/129 in-game checks** and **64 unit tests**.

@@ -643,8 +643,9 @@ public class PlayerAether implements IPlayerAether {
 
                 this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
                     .applyModifier(newModifier);
-            } else {
-                AetherNetwork.sendToAll(new PacketUpdateLifeShardCount(this.player, this.shardCount));
+            } else if (this.player instanceof EntityPlayerMP) {
+                AetherNetwork
+                    .sendTo(new PacketUpdateLifeShardCount(this.player, this.shardCount), (EntityPlayerMP) this.player);
             }
         }
     }

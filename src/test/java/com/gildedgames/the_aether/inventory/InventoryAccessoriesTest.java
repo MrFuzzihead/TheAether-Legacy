@@ -51,6 +51,18 @@ public class InventoryAccessoriesTest {
     }
 
     @Test
+    public void wearingAccessoryByItemDoesNotAllocateAnItemStack() {
+        InventoryAccessories inventory = new InventoryAccessories(playerAether);
+        Item item = mock(Item.class);
+        ItemStack stack = mock(ItemStack.class);
+
+        when(stack.getItem()).thenReturn(item);
+        inventory.setInventorySlotContents(0, stack);
+
+        org.junit.Assert.assertTrue(inventory.wearingAccessory(item));
+    }
+
+    @Test
     public void zaniteBonusScalesWithDamage() {
         Item item = new Item().setMaxDamage(300);
         ItemStack stack = new ItemStack(item);

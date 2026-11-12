@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -272,17 +273,20 @@ public class InventoryAccessories implements IAccessoryInventory {
 
     @Override
     public boolean wearingAccessory(ItemStack stack) {
-        boolean flag = false;
+        return stack != null && this.wearingAccessory(stack.getItem());
+    }
 
+    @Override
+    public boolean wearingAccessory(Item item) {
         for (int i = 0; i < this.getSizeInventory(); ++i) {
             ItemStack accessoryStack = this.getStackInSlot(i);
 
-            if (!flag && accessoryStack != null && accessoryStack.getItem() == stack.getItem()) {
-                flag = true;
+            if (accessoryStack != null && accessoryStack.getItem() == item) {
+                return true;
             }
         }
 
-        return flag;
+        return false;
     }
 
     @Override

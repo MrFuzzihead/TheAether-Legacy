@@ -34,10 +34,16 @@ public class AetherData extends WorldSavedData {
     @Override
     public void readFromNBT(NBTTagCompound compound) {
         data = compound.getCompoundTag(key);
+        this.eternalDay = data.getBoolean("EternalDay");
+        this.shouldCycleCatchup = data.getBoolean("ShouldCycleCatchup");
+        this.aetherTime = data.getLong("Time");
     }
 
     @Override
     public void writeToNBT(NBTTagCompound compound) {
+        data.setBoolean("EternalDay", this.eternalDay);
+        data.setBoolean("ShouldCycleCatchup", this.shouldCycleCatchup);
+        data.setLong("Time", this.aetherTime);
         compound.setTag(key, data);
     }
 
@@ -46,7 +52,6 @@ public class AetherData extends WorldSavedData {
     }
 
     public boolean isEternalDay() {
-        this.eternalDay = data.getBoolean("EternalDay");
         return this.eternalDay;
     }
 
@@ -57,7 +62,6 @@ public class AetherData extends WorldSavedData {
     }
 
     public boolean isShouldCycleCatchup() {
-        this.shouldCycleCatchup = data.getBoolean("ShouldCycleCatchup");
         return this.shouldCycleCatchup;
     }
 
@@ -68,7 +72,6 @@ public class AetherData extends WorldSavedData {
     }
 
     public long getAetherTime() {
-        this.aetherTime = data.getLong("Time");
         return this.aetherTime;
     }
 

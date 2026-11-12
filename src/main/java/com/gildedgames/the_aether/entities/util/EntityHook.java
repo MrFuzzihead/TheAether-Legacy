@@ -6,7 +6,6 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.boss.IBossDisplayData;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Direction;
@@ -81,7 +80,7 @@ public class EntityHook implements IExtendedEntityProperties {
                 PlayerAether playerAether = PlayerAether.get((EntityPlayer) livingEntity.getAttackTarget());
 
                 if (playerAether.getAccessoryInventory()
-                    .wearingAccessory(new ItemStack(ItemsAether.invisibility_cape))) {
+                    .wearingAccessory(ItemsAether.invisibility_cape)) {
                     livingEntity.setAttackTarget(null);
                 }
             }
@@ -94,7 +93,7 @@ public class EntityHook implements IExtendedEntityProperties {
                 PlayerAether playerAether = PlayerAether.get((EntityPlayer) creature.getEntityToAttack());
 
                 if (playerAether.getAccessoryInventory()
-                    .wearingAccessory(new ItemStack(ItemsAether.invisibility_cape))) {
+                    .wearingAccessory(ItemsAether.invisibility_cape)) {
                     creature.setTarget(null);
                 }
             }
@@ -107,7 +106,7 @@ public class EntityHook implements IExtendedEntityProperties {
                 PlayerAether playerAether = PlayerAether.get((EntityPlayer) living.getAITarget());
 
                 if (playerAether.getAccessoryInventory()
-                    .wearingAccessory(new ItemStack(ItemsAether.invisibility_cape))) {
+                    .wearingAccessory(ItemsAether.invisibility_cape)) {
                     living.setRevengeTarget(null);
                 }
             }
