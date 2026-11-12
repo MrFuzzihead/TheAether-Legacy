@@ -3,11 +3,9 @@ package com.gildedgames.the_aether.client;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiDownloadTerrain;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.gui.GuiOptions;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.ScreenChatOptions;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;
@@ -15,7 +13,6 @@ import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.settings.GameSettings;
-import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.boss.EntityDragon;
 import net.minecraft.entity.player.EntityPlayer;
@@ -28,7 +25,6 @@ import net.minecraft.world.World;
 import net.minecraftforge.client.event.FOVUpdateEvent;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent;
-import net.minecraftforge.client.event.GuiScreenEvent.DrawScreenEvent;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
@@ -60,7 +56,6 @@ import com.gildedgames.the_aether.player.perks.AetherRankings;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 
 import cpw.mods.fml.client.FMLClientHandler;
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -305,9 +300,11 @@ public class AetherClientEvents {
 
     private static final GuiMenuToggleButton MAIN_MENU_BUTTON = new GuiMenuToggleButton(0, 0);
 
-    private static int previousSelectedTabIndex = -1;
-
     private static boolean shouldRemoveButton = false;
+
+    public static GuiAccessoryButton getAccessoryButton() {
+        return ACCESSORY_BUTTON;
+    }
 
     @SubscribeEvent
     @SuppressWarnings("unchecked")
@@ -315,27 +312,13 @@ public class AetherClientEvents {
         if (event.gui instanceof GuiContainer) {
             EntityPlayer player = Minecraft.getMinecraft().thePlayer;
 
-            int xSize = event.gui instanceof GuiContainerCreative ? 195 : 176;
-            int ySize = event.gui instanceof GuiContainerCreative ? 136 : 166;
-            int guiLeft = (event.gui.width - xSize) / 2;
-            int guiTop = (event.gui.height - ySize) / 2;
+            int guiLeft = (event.gui.width - 176) / 2;
+            int guiTop = (event.gui.height - 166) / 2;
 
-            if (player.capabilities.isCreativeMode) {
-                if (event.gui instanceof GuiContainerCreative) {
-                    if (((GuiContainerCreative) event.gui).func_147056_g() == CreativeTabs.tabInventory.getTabIndex()) {
-                        event.buttonList.add(ACCESSORY_BUTTON.setPosition(guiLeft + 28, guiTop + 38));
-                        previousSelectedTabIndex = CreativeTabs.tabInventory.getTabIndex();
-                    }
-                }
-            } else if (event.gui instanceof GuiInventory) {
+            if (!player.capabilities.isCreativeMode && event.gui instanceof GuiInventory) {
                 // We place the buttons where they would be if the inventory was its original size, for consistency with
                 // Baubles's button placement algorithm
-                int xSizeOriginal = 176;
-                int ySizeOriginal = 166;
-                event.buttonList.add(
-                    ACCESSORY_BUTTON.setPosition(
-                        (xSize - xSizeOriginal) / 2 + guiLeft + 26,
-                        (ySize - ySizeOriginal) / 2 + guiTop + 65));
+                event.buttonList.add(ACCESSORY_BUTTON.setPosition(guiLeft + 26, guiTop + 65));
             }
 
             if (event.gui instanceof GuiAccessories) {
@@ -378,30 +361,6 @@ public class AetherClientEvents {
                 int i = 13;
                 event.buttonList.add(
                     new GuiCapeButton(event.gui.width / 2 - 155 + i % 2 * 160, event.gui.height / 6 + 24 * (i >> 1)));
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void onMouseClicked(DrawScreenEvent.Post event) {
-        if (Minecraft.getMinecraft().currentScreen instanceof GuiContainerCreative) {
-            GuiContainerCreative guiScreen = (GuiContainerCreative) Minecraft.getMinecraft().currentScreen;
-
-            if (previousSelectedTabIndex != guiScreen.func_147056_g()) {
-                List<GuiButton> buttonList = ObfuscationReflectionHelper
-                    .getPrivateValue(GuiScreen.class, (GuiScreen) guiScreen, 4);
-
-                if (guiScreen.func_147056_g() == CreativeTabs.tabInventory.getTabIndex()
-                    && !buttonList.contains(ACCESSORY_BUTTON)) {
-                    int guiLeft = (guiScreen.width - 195) / 2;
-                    int guiTop = (guiScreen.height - 136) / 2;
-
-                    buttonList.add(ACCESSORY_BUTTON.setPosition(guiLeft + 28, guiTop + 38));
-                } else if (previousSelectedTabIndex == CreativeTabs.tabInventory.getTabIndex()) {
-                    buttonList.remove(ACCESSORY_BUTTON);
-                }
-
-                previousSelectedTabIndex = guiScreen.func_147056_g();
             }
         }
     }

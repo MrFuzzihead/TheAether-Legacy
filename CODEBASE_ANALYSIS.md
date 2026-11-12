@@ -107,9 +107,9 @@ does this for `BattlegearClientEventHandler`).
 | Category | Result |
 |---|---|
 | Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
-| Mixins | **None.** `usesMixins = false`, no mixin JSON, no `mixinsPackage`, no `@Shadow`/`@Inject`/`@Redirect` classes. |
+| Mixins | **One early client mixin.** `usesMixins = true`, `mixinsPackage = mixins`, and `GuiContainerCreativeMixin` is loaded from `mixins.aether_legacy.json`. It replaces the creative-tab `buttonList` reflection. |
 | ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
-| Reflection | **Reduced:** 2 remaining sites (creative `buttonList`, `EntityRenderer.itemRenderer`). The Desktop link now uses `java.awt.Desktop` directly. The original audit inventory below is preserved for context. |
+| Reflection | **Reduced:** 1 remaining site (`EntityRenderer.itemRenderer`). The Desktop link uses `java.awt.Desktop` directly, and the creative-tab `buttonList` access now uses an early client mixin. The original audit inventory below is preserved for context. |
 
 The classpath does contain `org.ow2.asm:asm-debug-all:5.0.3` transitively from
 Minecraft/FML. That is a library dependency required by Forge/launchwrapper, not
@@ -123,7 +123,7 @@ already satisfies it.
 | `AetherEventHandler.java:404-415` | 1 | `Entity.invulnerable` via `ObfuscationReflectionHelper.setPrivateValue(..., "invulnerable", "field_83001_bt")` for dungeon-key `EntityItem`s. | **Remove.** `EntityAetherItem` already exists and overrides `isEntityInvulnerable()` to `true`. On `EntityJoinWorldEvent`, replace a normal dungeon-key `EntityItem` with `EntityAetherItem` (copy stack/position/motion/pickup delay, cancel the original join), or spawn keys through a custom entity factory. |
 | `PlayerAether.java:262-263` | 2 per player per tick | `EntityLivingBase.isJumping` via `ReflectionHelper.getPrivateValue(..., "isJumping", "field_70703_bu")`. | This is a **hot path** and a mapping-sensitive reflection lookup. There is no public getter in 1.7.10. Options: (a) track jump on the client from `EntityPlayerSP.movementInput.jump` and send a small packet/player-data field to the server; (b) add a narrow AT or mixin; (c) cache the reflected field at least. Pure API removal is difficult without an AT/mixin/packet. |
 | `AetherClientEvents.java:313-320` | 4 per GUI open | `GuiContainer.guiLeft`, `guiTop`, `xSize`, `ySize` via `ObfuscationReflectionHelper.getPrivateValue(...)`. These are `protected` in the MCP source. | Avoid for `GuiInventory`: the vanilla dimensions are known (`176 x 166`) and the position can be computed from `event.gui.width/height`. For other `GuiContainer`s, use the public screen dimensions or a small layout hook. Because the fields are `protected`, an unrelated event handler cannot read them directly. |
-| `AetherClientEvents.java:390-398` | 3 on creative-tab changes | `GuiScreen.buttonList` via indexed reflection, plus `guiLeft/guiTop` again. | Use `GuiScreenEvent.InitGuiEvent.Post#buttonList` where possible. The creative-tab switch is the awkward case: the button list is `protected` and there is no public event accessor. A clean fix is a small `GuiContainerCreative` integration/subclass or a dedicated button manager; otherwise one narrow AT for `buttonList` may be preferable to indexed reflection. |
+| `AetherClientEvents.java` creative-tab handler | **Removed** | `GuiScreen.buttonList` via indexed reflection, plus `guiLeft/guiTop` again. | **Resolved.** `GuiContainerCreativeMixin` injects at the tail of `setCurrentCreativeTab` and updates the button list directly. |
 | `AetherEntityRenderer.java:34` | 1 at client startup | `EntityRenderer.itemRenderer` (`field_78516_c` / index 7). | The field is `public final` in the MCP source; reflection is only needed to assign the final field. Prefer a custom first-person item renderer via `RenderHandEvent`/`IItemRenderer` or per-item rendering. If that cannot reproduce the behavior, a single narrow AT to remove `final` is less fragile than indexed reflection, though it violates the “avoid AT” preference. |
 | `EntitiesAether.java:138-150` | 2 per spawn-egg spawn | `Class.getConstructor(World.class).newInstance(world)`. | Replace with an explicit `Map<Integer, Function<World, Entity>>` factory (or a `switch` on the ID). This also avoids the repeated exception path and makes entity registration easier to validate. |
 | `AetherMainMenu.java` confirm handler | **Removed** | `java.awt.Desktop` reflective lookup, method lookup, and invocation. | **Resolved.** Uses `Desktop.isDesktopSupported()`, `Desktop.Action.BROWSE`, and direct `browse` with checked exception logging. |
@@ -1601,7 +1601,6 @@ Removed:
 
 Remaining reflection is intentionally deferred:
 
-- Creative-inventory `GuiScreen.buttonList`.
 - `EntityRenderer.itemRenderer` final-field assignment.
 
 The `AetherMainMenu` Desktop link now uses the direct `java.awt.Desktop` API.
@@ -1710,7 +1709,7 @@ Status key:
 |---|---|---|---|---|
 | R01 | B29 dungeon oak / golden-island vegetation | Done | Golden oaks restored; default trees suppressed; dead lake code removed | None |
 | R02 | Floating-island tautologies | Done | Early exit added; canopy shape unchanged | None |
-| R03 | Creative `buttonList` reflection | Decision | One narrow access transformer | Is a narrow AT acceptable? |
+| R03 | Creative `buttonList` reflection | Done | Early client mixin replaces reflection and polling | None |
 | R04 | `EntityRenderer.itemRenderer` reflection | Decision | Event-based rendering long-term; narrow AT as fallback | Is exact first-person parity required? |
 | R05 | Desktop reflection | Done | Completed with direct `java.awt.Desktop` | None |
 | R06 | `EntityHook` target checks | Won't fix | Keep all three distinct checks | None |
@@ -1757,20 +1756,18 @@ changed, that should be a separate visual comparison.
 
 ### R03 - Creative-inventory `buttonList` reflection
 
-**Current state:** `AetherClientEvents` reflectively reads
-`GuiScreen.buttonList` when the creative tab changes.
+**Status:** completed with an early client mixin.
 
-**Options:**
+`GuiContainerCreativeMixin` injects at the tail of `setCurrentCreativeTab` and
+adds or removes the accessory button directly. This covers the initial tab set
+during `initGui`, mouse tab changes, and keyboard/search tab changes without
+reflection or render-time polling.
 
-1. Replace the creative screen with a small `GuiContainerCreative` subclass that
-   exposes the button list and handles tab changes.
-2. Add one narrow access transformer for `GuiScreen.buttonList`.
-3. Keep the current isolated reflection.
+`AetherClientEvents` no longer tracks `previousSelectedTabIndex` or handles the
+creative button in `DrawScreenEvent.Post`. The non-creative inventory and
+accessories-screen button paths remain event-based.
 
-**Recommendation:** option 2 unless the no-AT rule is absolute. The custom-screen
-route is a larger lifecycle change for one accessory button.
-
-**Decision needed:** is a single narrowly scoped access transformer acceptable?
+**Decision needed:** none.
 
 ### R04 - `EntityRenderer.itemRenderer` reflection
 
