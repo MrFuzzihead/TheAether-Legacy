@@ -1,4 +1,4 @@
-package com.gildedgames.the_aether.mixins;
+package com.gildedgames.the_aether.mixins.early;
 
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;

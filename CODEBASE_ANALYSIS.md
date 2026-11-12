@@ -107,7 +107,7 @@ does this for `BattlegearClientEventHandler`).
 | Category | Result |
 |---|---|
 | Access transformers | **None.** `accessTransformersFile` is empty and no `*_at.cfg` files exist. |
-| Mixins | **One early client mixin.** `usesMixins = true`, `mixinsPackage = mixins`, and `GuiContainerCreativeMixin` is loaded from `mixins.aether_legacy.json`. It replaces the creative-tab `buttonList` reflection. |
+| Mixins | **One early client mixin.** `usesMixins = true`, `mixinsPackage = mixins`, and `coreModClass = mixins.EarlyMixinsLoader`. The base `mixins.aether_legacy.json` is the manifest bootstrap; the early loader registers `mixins.aether_legacy.early.json`, which loads `GuiContainerCreativeMixin`. It replaces the creative-tab `buttonList` reflection. |
 | ASM / coremod | **None in project code.** No `org.objectweb.asm` imports, no `ClassReader`/`ClassWriter`/`ClassVisitor`, no `IFMLLoadingPlugin`, no `IClassTransformer`. |
 | Reflection | **Reduced:** 1 remaining site (`EntityRenderer.itemRenderer`). The Desktop link uses `java.awt.Desktop` directly, and the creative-tab `buttonList` access now uses an early client mixin. The original audit inventory below is preserved for context. |
 
