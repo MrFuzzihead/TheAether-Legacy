@@ -22,6 +22,27 @@ public class PacketInitiateValkyrieFightTest {
     }
 
     @Test
+    public void medalCountIgnoresOtherItems() {
+        Item medal = new Item();
+        InventoryPlayer inventory = new InventoryPlayer(null);
+        inventory.mainInventory[0] = new ItemStack(medal, 4);
+        inventory.mainInventory[1] = new ItemStack(new Item(), 20);
+
+        assertEquals(4, PacketInitiateValkyrieFight.countMedals(inventory, medal));
+    }
+
+    @Test
+    public void medalConsumptionStopsAtTheRequestedAmount() {
+        Item medal = new Item();
+        InventoryPlayer inventory = new InventoryPlayer(null);
+        inventory.mainInventory[0] = new ItemStack(medal, 5);
+
+        PacketInitiateValkyrieFight.consumeMedals(inventory, medal, 3);
+
+        assertEquals(2, inventory.mainInventory[0].stackSize);
+    }
+
+    @Test
     public void medalConsumptionSpansStacks() {
         Item medal = new Item();
         InventoryPlayer inventory = new InventoryPlayer(null);
