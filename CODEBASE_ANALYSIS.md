@@ -1921,7 +1921,7 @@ scope is:
 | Item | Current state | Effort | Risk |
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
-| Optional NEI handlers | Partial: enchanter/freezer/incubator recipe viewer implemented; overlays deferred | Medium | Low-medium |
+| Optional NEI handlers | Done: enchanter/freezer/incubator viewer + automatic transfer; rendered Moa deferred | Medium | Low-medium |
 | Config validation | Done: IDs and spawn rates validated; 0 disables spawns; EndlessIDs limits honored | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
@@ -1959,10 +1959,12 @@ Game-test coverage now verifies that each tag contains the expected item.
   fuel, the incubator flame/progress animation, and a hatch message.
 - All three machines are registered as recipe catalysts, and their NEI tabs use
   the block icon instead of a truncated text label.
+- GUI overlays are registered for all three machines. `AetherMachineOverlayHandler`
+  maps slots 0 and 1 to the recipe inputs and supports automatic ingredient
+  transfer from the player inventory.
 
 Deferred for later passes:
 
-- GUI overlay and automatic ingredient transfer.
 - A rendered Moa model on the incubator page; the first pass uses text.
 - Additional NEI categories or recipe metadata.
 
@@ -2050,10 +2052,10 @@ parity, and config validation now have coverage. Remaining feature-specific test
 
 1. Loot table extraction/refactor - fix behavior first, then data-drive it.
 2. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
-3. NEI GUI overlays/transfer and incubator support - optional follow-ups.
+3. Rendered Moa model on the incubator NEI page - optional follow-up.
 
 OreDictionary coverage, localization key parity, config validation, and the
-enchanter/freezer NEI recipe viewer are complete. Loot tables are the next
+NEI viewer/overlay integration are complete. Loot tables are the next
 recommended task.
 
 **Decision needed:** which of these are in scope for this project cycle?
