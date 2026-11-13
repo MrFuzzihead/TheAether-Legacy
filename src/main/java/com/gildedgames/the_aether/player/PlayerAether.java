@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.UUID;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
@@ -35,6 +35,7 @@ import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.tools.ItemValkyrieTool;
 import com.gildedgames.the_aether.network.AetherNetwork;
 import com.gildedgames.the_aether.network.packets.PacketCapeChanged;
+import com.gildedgames.the_aether.network.packets.PacketJumping;
 import com.gildedgames.the_aether.network.packets.PacketPerkChanged;
 import com.gildedgames.the_aether.network.packets.PacketPortalItem;
 import com.gildedgames.the_aether.network.packets.PacketSendPoisonTime;
@@ -51,7 +52,6 @@ import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.world.TeleporterAether;
 
 import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.relauncher.ReflectionHelper;
 
 public class PlayerAether implements IPlayerAether {
 
@@ -62,6 +62,8 @@ public class PlayerAether implements IPlayerAether {
     private IAccessoryInventory accessories = new InventoryAccessories(this);
 
     private final ArrayList<IAetherAbility> abilities = new ArrayList<IAetherAbility>();
+
+    private final AbilityRepulsion repulsionAbility;
 
     public final ArrayList<Entity> clouds = new ArrayList<Entity>(2);
 
@@ -120,12 +122,13 @@ public class PlayerAether implements IPlayerAether {
         this.shouldRenderGlow = false;
         this.shouldRenderCape = true;
         this.shouldGetPortal = true;
+        this.repulsionAbility = new AbilityRepulsion(this);
         this.abilities.addAll(
             Arrays.<IAetherAbility>asList(
                 new AbilityAccessories(this),
                 new AbilityArmor(this),
                 new AbilityFlight(this),
-                new AbilityRepulsion(this)));
+                this.repulsionAbility));
     }
 
     public static PlayerAether get(EntityPlayer player) {
@@ -227,10 +230,8 @@ public class PlayerAether implements IPlayerAether {
             }
         }
 
-        for (int i = 0; i < this.clouds.size(); ++i) {
-            Entity entity = this.clouds.get(i);
-
-            if (entity.isDead) {
+        for (int i = this.clouds.size() - 1; i >= 0; --i) {
+            if (this.clouds.get(i).isDead) {
                 this.clouds.remove(i);
             }
         }
@@ -259,10 +260,14 @@ public class PlayerAether implements IPlayerAether {
             this.wingSinage += 0.1F;
         }
 
-        boolean hasJumped = ReflectionHelper
-            .getPrivateValue(EntityLivingBase.class, this.getEntity(), "isJumping", "field_70703_bu");
+        if (this.getEntity().worldObj.isRemote && this.getEntity() instanceof EntityPlayerSP) {
+            boolean jumping = ((EntityPlayerSP) this.getEntity()).movementInput.jump;
 
-        this.setJumping(hasJumped);
+            if (this.isJumping != jumping) {
+                this.isJumping = jumping;
+                AetherNetwork.sendToServer(new PacketJumping(jumping));
+            }
+        }
 
         this.getEntity().worldObj.theProfiler.startSection("portal");
 
@@ -306,14 +311,7 @@ public class PlayerAether implements IPlayerAether {
             if (this.getEntity().worldObj
                 .getBlock((int) this.getEntity().posX, (int) this.getEntity().posY - 1, (int) this.getEntity().posZ)
                 != Blocks.air) {
-                AxisAlignedBB playerBounding = this.getEntity().boundingBox;
-
-                if (this.getEntity().worldObj
-                    .getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
-                    != BlocksAether.aether_portal
-                    && this.getEntity().worldObj
-                        .getBlock((int) playerBounding.minX, (int) playerBounding.minY, (int) playerBounding.minZ)
-                        != BlocksAether.aether_portal) {
+                if (!this.isInsideBlock(BlocksAether.aether_portal)) {
                     this.inPortal = false;
                 }
             }
@@ -591,6 +589,10 @@ public class PlayerAether implements IPlayerAether {
         return this.abilities;
     }
 
+    public AbilityRepulsion getRepulsionAbility() {
+        return this.repulsionAbility;
+    }
+
     @Override
     public EntityPlayer getEntity() {
         return this.player;
@@ -641,8 +643,9 @@ public class PlayerAether implements IPlayerAether {
 
                 this.player.getEntityAttribute(SharedMonsterAttributes.maxHealth)
                     .applyModifier(newModifier);
-            } else {
-                AetherNetwork.sendToAll(new PacketUpdateLifeShardCount(this.player, this.shardCount));
+            } else if (this.player instanceof EntityPlayerMP) {
+                AetherNetwork
+                    .sendTo(new PacketUpdateLifeShardCount(this.player, this.shardCount), (EntityPlayerMP) this.player);
             }
         }
     }

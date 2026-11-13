@@ -5,6 +5,7 @@ import java.util.List;
 import net.minecraft.block.material.Material;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -34,33 +35,29 @@ public class InventoryAccessories implements IAccessoryInventory {
         this.playerAether = playerAether;
     }
 
+    @Override
     public float getCurrentPlayerStrVsBlock(float original) {
         float f = original;
 
         if (this.wearingAccessory(new ItemStack(ItemsAether.zanite_pendant))) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.PENDANT)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.PENDANT)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.PENDANT));
         }
 
         if (this.getStackInSlot(AccessoryType.RING) != null && this.getStackInSlot(AccessoryType.RING)
             .getItem() == ItemsAether.zanite_ring) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.RING)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.RING)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.RING));
         }
 
         if (this.getStackInSlot(AccessoryType.EXTRA_RING) != null && this.getStackInSlot(AccessoryType.EXTRA_RING)
             .getItem() == ItemsAether.zanite_ring) {
-            f *= (1F + ((float) (this.getStackInSlot(AccessoryType.EXTRA_RING)
-                .getItemDamage())
-                / ((float) (this.getStackInSlot(AccessoryType.EXTRA_RING)
-                    .getMaxDamage()) * 3F)));
+            f = applyZaniteBonus(f, this.getStackInSlot(AccessoryType.EXTRA_RING));
         }
 
-        return f == original ? original : f + original;
+        return f;
+    }
+
+    static float applyZaniteBonus(float original, ItemStack stack) {
+        return original * (1F + ((float) stack.getItemDamage()) / ((float) stack.getMaxDamage() * 3F));
     }
 
     @Override
@@ -171,6 +168,7 @@ public class InventoryAccessories implements IAccessoryInventory {
             if (stack != null) {
                 this.playerAether.getEntity()
                     .dropItem(stack.getItem(), stack.stackSize);
+                this.stacks.set(i, null);
             }
         }
 
@@ -214,6 +212,11 @@ public class InventoryAccessories implements IAccessoryInventory {
 
     @Override
     public void setAccessorySlot(AccessoryType type, ItemStack stack) {
+        if (stack == null) {
+            this.setInventorySlotContents(this.orderedList.func_148747_b(type), null);
+            return;
+        }
+
         if (stack.getItem() instanceof ItemAccessory) {
             if (this.getStackInSlot(type) == null) {
                 this.setInventorySlotContents(this.orderedList.func_148747_b(type), stack);
@@ -270,17 +273,20 @@ public class InventoryAccessories implements IAccessoryInventory {
 
     @Override
     public boolean wearingAccessory(ItemStack stack) {
-        boolean flag = false;
+        return stack != null && this.wearingAccessory(stack.getItem());
+    }
 
+    @Override
+    public boolean wearingAccessory(Item item) {
         for (int i = 0; i < this.getSizeInventory(); ++i) {
             ItemStack accessoryStack = this.getStackInSlot(i);
 
-            if (!flag && accessoryStack != null && accessoryStack.getItem() == stack.getItem()) {
-                flag = true;
+            if (accessoryStack != null && accessoryStack.getItem() == item) {
+                return true;
             }
         }
 
-        return flag;
+        return false;
     }
 
     @Override

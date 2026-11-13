@@ -54,7 +54,7 @@ public class EntityAerwhale extends EntityFlying {
         int j = MathHelper.floor_double(this.boundingBox.minY);
         int k = MathHelper.floor_double(this.posZ);
 
-        return this.rand.nextInt(AetherConfig.getAerwhaleSpawnrate()) == 0
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getAerwhaleSpawnrate())
             && this.worldObj.getBlock(i, j - 1, k) == BlocksAether.aether_grass
             && this.worldObj.getCollidingBoundingBoxes(this, this.boundingBox)
                 .size() == 0

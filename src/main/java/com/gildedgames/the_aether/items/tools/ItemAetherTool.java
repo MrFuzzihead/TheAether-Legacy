@@ -1,25 +1,17 @@
 package com.gildedgames.the_aether.items.tools;
 
-import java.util.Random;
 import java.util.Set;
 
 import net.minecraft.block.Block;
-import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemTool;
 
 import com.gildedgames.the_aether.items.util.EnumAetherToolType;
 import com.gildedgames.the_aether.registry.creative_tabs.AetherCreativeTabs;
-import com.google.common.collect.Multimap;
 
 public abstract class ItemAetherTool extends ItemTool {
 
-    private float attackDamage;
-
     private String toolClass;
-
-    public Random random = new Random();
 
     public EnumAetherToolType toolType;
 
@@ -67,16 +59,6 @@ public abstract class ItemAetherTool extends ItemTool {
     @Override
     public Set<String> getToolClasses(ItemStack stack) {
         return toolClass != null ? com.google.common.collect.ImmutableSet.of(toolClass) : super.getToolClasses(stack);
-    }
-
-    @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public Multimap getItemAttributeModifiers() {
-        Multimap multimap = super.getItemAttributeModifiers();
-        multimap.put(
-            SharedMonsterAttributes.attackDamage.getAttributeUnlocalizedName(),
-            new AttributeModifier(field_111210_e, "Tool modifier", (double) this.attackDamage, 0));
-        return multimap;
     }
 
     public float getEffectiveSpeed() {

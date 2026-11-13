@@ -27,7 +27,7 @@ public class EntityMoa extends EntitySaddleMount {
 
     public float wingRotation, destPos, prevDestPos, prevWingRotation;
 
-    protected int ticksOffGround, ticksUntilFlap, secsUntilFlying, secsUntilWalking, secsUntilHungry, secsUntilEgg;
+    protected int ticksOffGround, ticksUntilFlap, secsUntilHungry, secsUntilEgg;
 
     public EntityMoa(World world) {
         super(world);
@@ -108,7 +108,7 @@ public class EntityMoa extends EntitySaddleMount {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getMoaSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getMoaSpawnrate()) && super.getCanSpawnHere();
     }
 
     public boolean isSitting() {
@@ -355,9 +355,14 @@ public class EntityMoa extends EntitySaddleMount {
 
         this.setPlayerGrown(nbt.getBoolean("playerGrown"));
         this.setRemainingJumps(nbt.getInteger("remainingJumps"));
-        this.setMoaType(
-            AetherAPI.instance()
-                .getMoaType(nbt.getInteger("moaTypeId")));
+
+        AetherMoaType moaType = AetherAPI.instance()
+            .getMoaType(nbt.getInteger("moaTypeId"));
+
+        if (moaType != null) {
+            this.setMoaType(moaType);
+        }
+
         this.setAmountFed(nbt.getByte("amountFed"));
         this.setHungry(nbt.getBoolean("isHungry"));
         this.setSitting(nbt.getBoolean("isSitting"));

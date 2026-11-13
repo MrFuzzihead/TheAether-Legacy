@@ -69,7 +69,7 @@ public class EntityPhyg extends EntitySaddleMount {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getPhygSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getPhygSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override
@@ -151,12 +151,6 @@ public class EntityPhyg extends EntitySaddleMount {
     private void fall() {
         if (this.motionY < 0.0D && !this.isRiderSneaking()) {
             this.motionY *= 0.6D;
-        }
-
-        if (!this.isOnGround() && !this.isJumping) {
-            if (this.isOnGround() && !this.worldObj.isRemote) {
-                this.jumpsRemaining = this.maxJumps;
-            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.gildedgames.the_aether.api.player.util;
 import java.util.List;
 
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
@@ -19,6 +20,8 @@ public interface IAccessoryInventory extends IInventory {
 
     public void damageWornStack(int damage, ItemStack stack);
 
+    public float getCurrentPlayerStrVsBlock(float original);
+
     public void setAccessorySlot(AccessoryType type, ItemStack stack);
 
     public ItemStack getStackInSlot(AccessoryType type);
@@ -28,6 +31,8 @@ public interface IAccessoryInventory extends IInventory {
     public boolean setAccessorySlot(ItemStack stack);
 
     public boolean wearingAccessory(ItemStack stack);
+
+    public boolean wearingAccessory(Item item);
 
     public boolean wearingArmor(ItemStack stack);
 

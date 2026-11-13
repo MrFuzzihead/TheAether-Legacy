@@ -53,7 +53,8 @@ public class EntityAechorPlant extends EntityAetherAnimal {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getAechorPlantSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getAechorPlantSpawnrate())
+            && super.getCanSpawnHere();
     }
 
     @Override
@@ -109,7 +110,7 @@ public class EntityAechorPlant extends EntityAetherAnimal {
     }
 
     public void shootAtPlayer() {
-        if (this.worldObj.difficultySetting.equals(EnumDifficulty.PEACEFUL)) {
+        if (this.worldObj.isRemote || this.worldObj.difficultySetting.equals(EnumDifficulty.PEACEFUL)) {
             return;
         }
 
@@ -139,11 +140,9 @@ public class EntityAechorPlant extends EntityAetherAnimal {
 
     @Override
     public void knockBack(Entity entity, float strength, double xRatio, double zRatio) {
-        if (this.getHealth() >= 0) {
-            return;
-        }
-
-        super.knockBack(entity, strength, xRatio, zRatio);
+        // Aechor Plants are rooted in place; EntityLivingBase.knockBack would
+        // move them even though addVelocity/applyEntityCollision are disabled.
+        return;
     }
 
     @Override

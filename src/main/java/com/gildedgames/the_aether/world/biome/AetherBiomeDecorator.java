@@ -12,21 +12,23 @@ import net.minecraft.world.gen.feature.WorldGenDoublePlant;
 import net.minecraft.world.gen.feature.WorldGenLakes;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.gildedgames.the_aether.AetherConfig;
 import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenClouds;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenDungeonOakTree;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFloatingIsland;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenFoilage;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenHolidayTree;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenLakes;
-import com.gildedgames.the_aether.world.biome.decoration.AetherGenLiquids;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenMinable;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenOakTree;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenQuicksoil;
 import com.gildedgames.the_aether.world.biome.decoration.AetherGenSkyrootTree;
 
 public class AetherBiomeDecorator extends BiomeDecorator {
+
+    private static final Logger logger = LogManager.getLogger();
 
     public World world;
 
@@ -40,17 +42,17 @@ public class AetherBiomeDecorator extends BiomeDecorator {
 
     public AetherGenSkyrootTree skyroot_tree = new AetherGenSkyrootTree(false);
 
-    public AetherGenDungeonOakTree golden_oak_tree_dungeon = new AetherGenDungeonOakTree();
+    private final AetherGenOakTree golden_oak_tree = new AetherGenOakTree();
+
+    private final AetherGenSkyrootTree skyroot_tree_decoration = new AetherGenSkyrootTree(true);
+
+    private final WorldGenLakes water_lake = new WorldGenLakes(Blocks.water);
 
     public AetherGenQuicksoil quicksoil_patches = new AetherGenQuicksoil();
 
     public AetherGenFloatingIsland crystal_island = new AetherGenFloatingIsland();
 
-    public AetherGenLiquids liquid_overhang = new AetherGenLiquids();
-
     public AetherGenHolidayTree holiday_tree = new AetherGenHolidayTree();
-
-    public AetherGenLakes aether_lakes = new AetherGenLakes();
 
     public AetherGenClouds clouds = new AetherGenClouds();
 
@@ -63,14 +65,20 @@ public class AetherBiomeDecorator extends BiomeDecorator {
     @Override
     public void decorateChunk(World worldIn, Random random, BiomeGenBase biome, int x, int z) {
         if (this.world != null) {
-            System.out.println("Already decorating");
-        } else {
+            logger.warn("Already decorating an Aether chunk; skipping this pass");
+            return;
+        }
+
+        try {
             this.world = worldIn;
             this.rand = random;
             this.chunk_X = x;
             this.chunk_Z = z;
             this.aetherBiome = biome;
             this.genDecorations(biome);
+        } finally {
+            // An exception during decoration must not leave this decorator
+            // permanently marked as busy for every later chunk.
             this.world = null;
             this.rand = null;
         }
@@ -106,6 +114,10 @@ public class AetherBiomeDecorator extends BiomeDecorator {
             int z = this.chunk_Z + this.nextInt(16) + 8;
             int y = this.world.getHeightValue(x, z);
 
+            if (this.isGoldenIslandSurface(x, y, z)) {
+                continue;
+            }
+
             this.getTree()
                 .generate(this.world, this.rand, x, y, z);
         }
@@ -118,15 +130,11 @@ public class AetherBiomeDecorator extends BiomeDecorator {
                 int x = this.chunk_X + 8;
                 int z = this.chunk_Z + 8;
                 int y = this.world.getHeightValue(x, z);
-                this.holiday_tree.generate(this.world, this.rand, x, y, z);
-            }
-        }
 
-        for (int i = 0; i < 25; i++) {
-            int x = this.chunk_X + this.nextInt(16);
-            int z = this.chunk_Z + this.nextInt(16);
-            int y = this.world.getHeightValue(x, z);
-            this.golden_oak_tree_dungeon.generate(this.world, this.rand, x, y, z);
+                if (!this.isGoldenIslandSurface(x, y, z)) {
+                    this.holiday_tree.generate(this.world, this.rand, x, y, z);
+                }
+            }
         }
 
         if (AetherConfig.tallgrassEnabled()) {
@@ -159,7 +167,7 @@ public class AetherBiomeDecorator extends BiomeDecorator {
         }
 
         if (this.shouldSpawn(10)) {
-            (new WorldGenLakes(Blocks.water)).generate(
+            this.water_lake.generate(
                 this.world,
                 this.rand,
                 this.chunk_X + this.rand.nextInt(16) + 8,
@@ -177,7 +185,12 @@ public class AetherBiomeDecorator extends BiomeDecorator {
     }
 
     public WorldGenerator getTree() {
-        return this.shouldSpawn(30) ? new AetherGenOakTree() : new AetherGenSkyrootTree(true);
+        return this.shouldSpawn(30) ? this.golden_oak_tree : this.skyroot_tree_decoration;
+    }
+
+    boolean isGoldenIslandSurface(int x, int y, int z) {
+        return this.world.getBlock(x, y - 1, z) == BlocksAether.aether_grass
+            && this.world.getBlockMetadata(x, y - 1, z) == 3;
     }
 
     public void generateFoilage(Block block) {

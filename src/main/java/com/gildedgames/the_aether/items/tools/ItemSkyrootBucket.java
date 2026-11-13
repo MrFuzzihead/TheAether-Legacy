@@ -315,23 +315,21 @@ public class ItemSkyrootBucket extends Item {
     }
 
     public ItemStack onBucketUsed(ItemStack itemstack, World world, EntityPlayer entityplayer) {
-        PlayerAether player = PlayerAether.get(entityplayer);
-        int meta = itemstack.getItemDamage();
+        if (!world.isRemote) {
+            PlayerAether player = PlayerAether.get(entityplayer);
+            int meta = itemstack.getItemDamage();
 
-        if (!entityplayer.capabilities.isCreativeMode) {
-            --itemstack.stackSize;
-        }
-
-        if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Poison) {
-            entityplayer.addPotionEffect(new EffectInebriation(PotionInebriation.inebriation.id, 500, 0));
-        } else if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Remedy) {
-            player.setCured(200);
-            if (!world.isRemote) {
-                entityplayer
-                    .curePotionEffects(new ItemStack(ItemsAether.skyroot_bucket, EnumSkyrootBucketType.Remedy.meta));
+            if (!entityplayer.capabilities.isCreativeMode) {
+                --itemstack.stackSize;
             }
-        } else if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Milk) {
-            if (!world.isRemote) {
+
+            if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Poison) {
+                entityplayer.addPotionEffect(new EffectInebriation(PotionInebriation.inebriation.id, 500, 0));
+            } else if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Remedy) {
+                player.setCured(200);
+                entityplayer
+                    .curePotionEffects(new ItemStack(ItemsAether.skyroot_bucket, 1, EnumSkyrootBucketType.Remedy.meta));
+            } else if (EnumSkyrootBucketType.getType(meta) == EnumSkyrootBucketType.Milk) {
                 entityplayer.curePotionEffects(new ItemStack(Items.milk_bucket));
             }
         }

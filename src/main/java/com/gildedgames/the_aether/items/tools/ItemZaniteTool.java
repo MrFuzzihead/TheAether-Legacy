@@ -8,7 +8,7 @@ import com.gildedgames.the_aether.items.util.EnumAetherToolType;
 
 public class ItemZaniteTool extends ItemAetherTool {
 
-    public float[] level = new float[] { 2F, 4F, 6F, 8F, 12F };
+    public static final float[] level = new float[] { 2F, 4F, 6F, 8F, 12F };
 
     public ItemZaniteTool(float damage, EnumAetherToolType toolType) {
         super(damage, ToolMaterial.IRON, toolType);
@@ -24,7 +24,7 @@ public class ItemZaniteTool extends ItemAetherTool {
         return this.calculateIncrease(stack, this.toolType.getStrVsBlock(stack, block));
     }
 
-    private float calculateIncrease(ItemStack tool, float original) {
+    static float calculateIncrease(ItemStack tool, float original) {
         boolean AllowedCalculations = original != 4.0F ? false : true;
         int current = tool.getItemDamage();
 
@@ -45,7 +45,7 @@ public class ItemZaniteTool extends ItemAetherTool {
         }
     }
 
-    private boolean isBetween(int max, int origin, int min) {
+    private static boolean isBetween(int max, int origin, int min) {
         return origin <= max && origin >= min ? true : false;
     }
 

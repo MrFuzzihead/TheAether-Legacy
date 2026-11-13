@@ -14,8 +14,12 @@ public abstract class AetherPacket<Packet extends IMessage> implements IMessage,
     @Override
     public Packet onMessage(Packet message, MessageContext context) {
         if (context.side == Side.CLIENT) {
-            this.handleClient(message, Aether.proxy.getPlayer());
-        } else if (context.side == Side.SERVER) {
+            EntityPlayer player = Aether.proxy.getPlayer();
+
+            if (player != null) {
+                this.handleClient(message, player);
+            }
+        } else if (context.side == Side.SERVER && context.getServerHandler() != null) {
             this.handleServer(message, context.getServerHandler().playerEntity);
         }
 

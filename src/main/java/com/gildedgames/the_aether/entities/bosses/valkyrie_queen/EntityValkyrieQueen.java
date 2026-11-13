@@ -262,7 +262,7 @@ public class EntityValkyrieQueen extends EntityBossMob implements IAetherBoss {
                     Block state = this.worldObj.getBlock(this.dungeonX - 1, this.dungeonY, this.dungeonZ + k);
 
                     if (state != BlocksAether.locked_angelic_stone
-                        || state != BlocksAether.locked_light_angelic_stone) {
+                        && state != BlocksAether.locked_light_angelic_stone) {
                         this.worldObj.setBlock(
                             this.dungeonX - 1,
                             this.dungeonY,
@@ -405,9 +405,15 @@ public class EntityValkyrieQueen extends EntityBossMob implements IAetherBoss {
         NBTTagList nbttaglist = nbttagcompound.getTagList("SafePos", 10);
         this.setBossName(nbttagcompound.getString("BossName"));
 
-        this.safeX = nbttaglist.func_150309_d(0);
-        this.safeY = nbttaglist.func_150309_d(1);
-        this.safeZ = nbttaglist.func_150309_d(2);
+        if (nbttaglist.tagCount() >= 3) {
+            this.safeX = nbttaglist.func_150309_d(0);
+            this.safeY = nbttaglist.func_150309_d(1);
+            this.safeZ = nbttaglist.func_150309_d(2);
+        } else {
+            this.safeX = this.posX;
+            this.safeY = this.posY;
+            this.safeZ = this.posZ;
+        }
     }
 
     @Override
@@ -423,7 +429,7 @@ public class EntityValkyrieQueen extends EntityBossMob implements IAetherBoss {
 
             if (!this.isBossReady()) {
                 spawnExplosionParticle();
-                int pokey = rand.nextInt(2);
+                int pokey = rand.nextInt(3);
 
                 if (pokey == 2) {
                     chatItUp(player, StatCollector.translateToLocal("gui.queen.peaceful"));

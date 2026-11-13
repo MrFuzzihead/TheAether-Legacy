@@ -1,6 +1,7 @@
 package com.gildedgames.the_aether.blocks.natural;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Random;
 
 import net.minecraft.block.BlockLeaves;
@@ -129,6 +130,17 @@ public class BlockAetherLeaves extends BlockLeaves {
     @Override
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
         ArrayList<ItemStack> drops = super.getDrops(world, x, y, z, metadata, fortune);
+
+        // BlockLeaves#getDrops constructs an ItemStack even when getItemDropped returns null.
+        // Crystal/holiday leaves intentionally have no sapling drop, so drop those invalid stacks.
+        Iterator<ItemStack> iterator = drops.iterator();
+        while (iterator.hasNext()) {
+            ItemStack drop = iterator.next();
+
+            if (drop == null || drop.getItem() == null) {
+                iterator.remove();
+            }
+        }
 
         if (this == BlocksAether.crystal_fruit_leaves) {
             drops.add(new ItemStack(ItemsAether.white_apple));

@@ -23,6 +23,9 @@ import com.gildedgames.the_aether.network.packets.PacketSwetJump;
 
 public class EntitySwet extends EntityMountable {
 
+    private static final float BASE_WIDTH = 0.8F;
+    private static final float BASE_HEIGHT = 0.8F;
+
     public boolean wasOnGround;
     public boolean midJump;
     public int jumpTimer;
@@ -38,7 +41,7 @@ public class EntitySwet extends EntityMountable {
     public EntitySwet(World world) {
         super(world);
 
-        this.setSize(0.8F, 0.8F);
+        this.setSize(BASE_WIDTH, BASE_HEIGHT);
         this.setPosition(this.posX, this.posY, this.posZ);
 
         this.swetHeight = 1.0F;
@@ -142,6 +145,10 @@ public class EntitySwet extends EntityMountable {
 
         super.onUpdate();
 
+        if (!this.hasPrey() && (this.width != BASE_WIDTH || this.height != BASE_HEIGHT)) {
+            this.setSize(BASE_WIDTH, BASE_HEIGHT);
+        }
+
         if (!this.hasPrey()) {
             for (int i = 0; i < 5; i++) {
                 double d = (float) this.posX + (this.rand.nextFloat() - this.rand.nextFloat()) * 0.3F;
@@ -163,8 +170,12 @@ public class EntitySwet extends EntityMountable {
         }
 
         if (!this.worldObj.isRemote) {
+            boolean wasMidJump = this.midJump;
             this.midJump = !this.onGround;
-            AetherNetwork.sendToAll(new PacketSwetJump(this.getEntityId(), !this.onGround));
+
+            if (this.midJump != wasMidJump) {
+                AetherNetwork.sendToAllAround(new PacketSwetJump(this.getEntityId(), this.midJump), this, 128.0D);
+            }
         }
 
         if (this.worldObj.isRemote) {
@@ -395,6 +406,10 @@ public class EntitySwet extends EntityMountable {
             count += this.rand.nextInt(lootLevel + 1);
         }
 
+        if (count <= 0) {
+            return;
+        }
+
         if (this.getType() == EnumSwetType.GOLDEN) {
             this.entityDropItem(new ItemStack(Blocks.glowstone, count), 1.0F);
         } else {
@@ -439,7 +454,7 @@ public class EntitySwet extends EntityMountable {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getSwetSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getSwetSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override
@@ -449,7 +464,7 @@ public class EntitySwet extends EntityMountable {
 
     @Override
     public boolean canDespawn() {
-        return this.isFriendly();
+        return !this.isFriendly();
     }
 
     @Override

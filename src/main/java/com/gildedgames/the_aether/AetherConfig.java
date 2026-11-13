@@ -2,10 +2,24 @@ package com.gildedgames.the_aether;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Random;
 
 import net.minecraftforge.common.config.Configuration;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import cpw.mods.fml.common.Loader;
+
 public class AetherConfig {
+
+    private static final Logger logger = LogManager.getLogger();
+
+    private static final int ENDLESS_IDS_LIMIT = 65536;
+
+    private static int biomeIdLimit = 256;
+
+    private static int potionIdLimit = 32;
 
     public static Configuration config;
 
@@ -100,7 +114,7 @@ public class AetherConfig {
         book_of_lore = config
             .get("Misc", "Gives the Player a Book of Lore upon entering the Aether for the first time", true)
             .getBoolean(true);
-        book_of_lore = config
+        golden_parachute = config
             .get("Misc", "Gives the Player a Golden Parachute upon entering the Aether for the first time", true)
             .getBoolean(true);
 
@@ -149,38 +163,121 @@ public class AetherConfig {
             .getBoolean(true);
 
         // Spawnrates
-        phyg_spawnrate = config.get("Spawnrates", "Phyg Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+        phyg_spawnrate = config
+            .get("Spawnrates", "Phyg Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
         flyingcow_spawnrate = config
-            .get("Spawnrates", "Flying Cow Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+            .get("Spawnrates", "Flying Cow Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
         sheepuff_spawnrate = config
-            .get("Spawnrates", "Sheepuff Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+            .get("Spawnrates", "Sheepuff Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
         aerbunny_spawnrate = config
-            .get("Spawnrates", "Aerbunny Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+            .get("Spawnrates", "Aerbunny Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
-        moa_spawnrate = config.get("Spawnrates", "Moa Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+        moa_spawnrate = config
+            .get("Spawnrates", "Moa Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
         aerwhale_spawnrate = config
-            .get("Spawnrates", "Aerwhale Spawnrate. 1 is always, higher numbers decrease chances.", 1)
+            .get("Spawnrates", "Aerwhale Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 1)
             .getInt(1);
         zephyr_spawnrate = config
-            .get("Spawnrates", "Zephyr Spawnrate. 1 is always, higher numbers decrease chances.", 65)
+            .get("Spawnrates", "Zephyr Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 65)
             .getInt(65);
         cockatrice_spawnrate = config
-            .get("Spawnrates", "Cockatrice Spawnrate. 1 is always, higher numbers decrease chances.", 45)
+            .get("Spawnrates", "Cockatrice Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 45)
             .getInt(45);
-        swet_spawnrate = config.get("Spawnrates", "Swet Spawnrate. 1 is always, higher numbers decrease chances.", 40)
+        swet_spawnrate = config
+            .get("Spawnrates", "Swet Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 40)
             .getInt(40);
         aechorplant_spawnrate = config
-            .get("Spawnrates", "Aechor Plant Spawnrate. 1 is always, higher numbers decrease chances.", 55)
+            .get("Spawnrates", "Aechor Plant Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 55)
             .getInt(55);
         whirlwind_spawnrate = config
-            .get("Spawnrates", "Whirlwind Spawnrate. 1 is always, higher numbers decrease chances.", 55)
+            .get("Spawnrates", "Whirlwind Spawnrate. 0 disables, 1 is always, higher numbers decrease chances.", 55)
             .getInt(55);
 
+        if (Loader.isModLoaded("endlessids")) {
+            biomeIdLimit = ENDLESS_IDS_LIMIT;
+        }
+
+        potionIdLimit = net.minecraft.potion.Potion.potionTypes.length;
+
+        validateLoadedValues();
+
         config.save();
+    }
+
+    private static void validateLoadedValues() {
+        aether_dimension_id = validateDimensionId(aether_dimension_id);
+        aether_biome_id = validateBiomeId(aether_biome_id);
+        inebriation_id = validatePotionId(inebriation_id);
+        max_life_shards = validateMaxLifeShards(max_life_shards);
+
+        phyg_spawnrate = validateSpawnRate("Phyg", phyg_spawnrate);
+        flyingcow_spawnrate = validateSpawnRate("Flying Cow", flyingcow_spawnrate);
+        sheepuff_spawnrate = validateSpawnRate("Sheepuff", sheepuff_spawnrate);
+        aerbunny_spawnrate = validateSpawnRate("Aerbunny", aerbunny_spawnrate);
+        moa_spawnrate = validateSpawnRate("Moa", moa_spawnrate);
+        aerwhale_spawnrate = validateSpawnRate("Aerwhale", aerwhale_spawnrate);
+        zephyr_spawnrate = validateSpawnRate("Zephyr", zephyr_spawnrate);
+        cockatrice_spawnrate = validateSpawnRate("Cockatrice", cockatrice_spawnrate);
+        swet_spawnrate = validateSpawnRate("Swet", swet_spawnrate);
+        aechorplant_spawnrate = validateSpawnRate("Aechor Plant", aechorplant_spawnrate);
+        whirlwind_spawnrate = validateSpawnRate("Whirlwind", whirlwind_spawnrate);
+    }
+
+    static int validateDimensionId(int value) {
+        if (value <= 1) {
+            logger.warn("Invalid Aether dimension ID {}; using default 4", value);
+            return 4;
+        }
+
+        return value;
+    }
+
+    static int validateBiomeId(int value) {
+        if (value < 0 || value >= biomeIdLimit) {
+            logger
+                .warn("Invalid Aether biome ID {} for the active ID limit {}; using default 127", value, biomeIdLimit);
+            return 127;
+        }
+
+        return value;
+    }
+
+    static int validatePotionId(int value) {
+        if (value < 1 || value >= potionIdLimit) {
+            logger.warn(
+                "Invalid Inebriation potion ID {} for the active ID limit {}; using default 31",
+                value,
+                potionIdLimit);
+            return 31;
+        }
+
+        return value;
+    }
+
+    static int validateMaxLifeShards(int value) {
+        if (value < 1) {
+            logger.warn("Invalid maximum life shards {}; using default 10", value);
+            return 10;
+        }
+
+        return value;
+    }
+
+    static int validateSpawnRate(String name, int value) {
+        if (value < 0) {
+            logger.warn("Invalid {} spawn rate {}; using 0 (disabled)", name, value);
+            return 0;
+        }
+
+        return value;
+    }
+
+    public static boolean passesSpawnRate(Random random, int rate) {
+        return rate > 0 && random.nextInt(rate) == 0;
     }
 
     public static int getAetherDimensionID() {
@@ -235,8 +332,22 @@ public class AetherConfig {
         return AetherConfig.menu_enabled;
     }
 
+    public static void setMenuEnabled(boolean enabled) {
+        AetherConfig.menu_enabled = enabled;
+
+        if (AetherConfig.config != null) {
+            AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
+                .set(enabled);
+            AetherConfig.config.save();
+        }
+    }
+
     public static boolean menuButtonEnabled() {
         return AetherConfig.menu_button;
+    }
+
+    public static boolean musicEnabled() {
+        return AetherConfig.toggle_music;
     }
 
     public static boolean installResourcepack() {

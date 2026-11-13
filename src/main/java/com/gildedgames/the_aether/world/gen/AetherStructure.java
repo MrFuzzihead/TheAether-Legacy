@@ -12,6 +12,19 @@ import net.minecraft.world.World;
 import net.minecraft.world.gen.structure.StructureBoundingBox;
 import net.minecraft.world.gen.structure.StructureComponent;
 
+/**
+ * Base class for bounded, NBT-serializable Aether structure components.
+ *
+ * <p>
+ * This class is intentionally separate from
+ * {@link com.gildedgames.the_aether.world.dungeon.util.AetherDungeon}. Structure components use
+ * relative offsets and a {@link StructureBoundingBox}, track block metadata and extra-block chances,
+ * and write through {@link StructureComponent}'s bounded placement API. The absolute-coordinate
+ * dungeon helper extends {@link net.minecraft.world.gen.feature.WorldGenerator} instead and writes
+ * directly into the world during chunk population. Sharing geometry across those models would need
+ * an adapter that preserves their different coordinate and block-update semantics, so the
+ * duplication is kept until another absolute-coordinate dungeon needs it.
+ */
 public abstract class AetherStructure extends StructureComponent {
 
     public int chance;

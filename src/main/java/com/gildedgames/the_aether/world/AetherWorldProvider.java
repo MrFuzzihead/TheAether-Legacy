@@ -48,44 +48,9 @@ public class AetherWorldProvider extends WorldProvider {
 
     @Override
     public float calculateCelestialAngle(long worldTime, float partialTicks) {
-        if (!AetherConfig.eternalDayDisabled()) {
-            if (!this.worldObj.isRemote) {
-                AetherData data = AetherData.getInstance(this.worldObj);
-
-                if (data.isEternalDay()) {
-                    // The Aether's sky time lives in AetherData and advances
-                    // one tick per server tick so the sun cycles. The world's
-                    // own WorldInfo time cannot be reliably set in this
-                    // environment (writes to it do not stick), so everything
-                    // (altar, sleeping, this advance) goes through AetherData;
-                    // the old catch-up / follow-WorldInfo logic was removed by
-                    // the Section-0 time-system rework.
-                    data.setShouldCycleCatchup(true);
-                    data.setAetherTime((data.getAetherTime() + 1L) % 24000L);
-                } else if (data.getAetherTime() != 6000L) {
-                    // Eternal day inactive: pin the sky at noon (6000). Write
-                    // only on the transition; the steady state costs nothing.
-                    data.setAetherTime(6000L);
-                }
-
-                this.aetherTime = data.getAetherTime();
-
-                // Sync the aether time to the dimension's clients at most
-                // once per 20 ticks (once per second); a second of latency is
-                // imperceptible on a 20-minute day/night cycle. The
-                // joining-player sync happens in the dimension-change
-                // handler. (Phase-9 throttle.)
-                long totalTime = this.worldObj.getTotalWorldTime();
-
-                if (this.aetherTime != this.lastSentAetherTime && totalTime - this.lastTimeSyncTick >= 20L) {
-                    this.lastSentAetherTime = this.aetherTime;
-                    this.lastTimeSyncTick = totalTime;
-                    AetherNetwork
-                        .sendToDimension(new PacketSendTime(this.aetherTime), AetherConfig.getAetherDimensionID());
-                }
-            }
-        }
-
+        // This method is a read-only calculation. The Aether source of truth
+        // is AetherData, advanced once per server world tick by
+        // updateAetherTime(); clients receive the value through PacketSendTime.
         int i = (int) (AetherConfig.eternalDayDisabled() ? worldTime : this.aetherTime % 24000L);
 
         float f = ((float) i + partialTicks) / 24000.0F - 0.25F;
@@ -101,6 +66,48 @@ public class AetherWorldProvider extends WorldProvider {
         float f1 = 1.0F - (float) ((Math.cos((double) f * Math.PI) + 1.0D) / 2.0D);
         f = f + (f1 - f) / 3.0F;
         return f;
+    }
+
+    /**
+     * Advances and synchronizes the Aether's independent time-of-day exactly
+     * once per server world tick.
+     *
+     * <p>
+     * The Aether shares its WorldInfo with the overworld in this environment,
+     * so the sky time has to live in {@link AetherData} rather than the vanilla
+     * world clock. Keeping the advancement here (instead of in
+     * {@link #calculateCelestialAngle(long, float)}) means rendering/query code
+     * can ask for the angle as often as it likes without changing time.
+     * </p>
+     */
+    public void updateAetherTime() {
+        if (this.worldObj == null || this.worldObj.isRemote || AetherConfig.eternalDayDisabled()) {
+            return;
+        }
+
+        AetherData data = AetherData.getInstance(this.worldObj);
+
+        if (data.isEternalDay()) {
+            data.setShouldCycleCatchup(true);
+            data.setAetherTime((data.getAetherTime() + 1L) % 24000L);
+        } else if (data.getAetherTime() != 6000L) {
+            // Eternal day inactive: pin the sky at noon (6000). Write only on
+            // the transition; the steady state costs nothing.
+            data.setAetherTime(6000L);
+        }
+
+        this.aetherTime = data.getAetherTime();
+
+        // Sync the aether time to the dimension's clients at most once per
+        // 20 ticks (once per second). The joining-player sync happens in the
+        // dimension-change handler.
+        long totalTime = this.worldObj.getTotalWorldTime();
+
+        if (this.aetherTime != this.lastSentAetherTime && totalTime - this.lastTimeSyncTick >= 20L) {
+            this.lastSentAetherTime = this.aetherTime;
+            this.lastTimeSyncTick = totalTime;
+            AetherNetwork.sendToDimension(new PacketSendTime(this.aetherTime), AetherConfig.getAetherDimensionID());
+        }
     }
 
     public void setIsEternalDay(boolean set) {

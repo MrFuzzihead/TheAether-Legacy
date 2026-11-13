@@ -72,7 +72,7 @@ public class EntityAerbunny extends EntityAetherAnimal implements IEntityAdditio
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getAerbunnySpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getAerbunnySpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override

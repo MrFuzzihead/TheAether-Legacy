@@ -106,16 +106,13 @@ public class EntityParachute extends Entity implements IEntityAdditionalSpawnDat
     }
 
     private boolean isCollided() {
+        AxisAlignedBB riderBox = this.ridingPlayer == null ? null : this.ridingPlayer.boundingBox;
         List<?> list = this.worldObj.getCollidingBoundingBoxes(this, this.boundingBox);
 
-        for (int size = 0; size < list.size();) {
-            if (size == 0 && list.size() == 0) {
-                return false;
+        for (Object collision : list) {
+            if (collision != riderBox) {
+                return true;
             }
-
-            AxisAlignedBB collision_list = (AxisAlignedBB) list.get(size);
-
-            return collision_list != this.ridingPlayer.boundingBox;
         }
 
         return this.worldObj.isAABBInMaterial(this.boundingBox, Material.water);

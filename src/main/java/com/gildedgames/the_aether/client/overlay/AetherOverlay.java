@@ -334,8 +334,4 @@ public class AetherOverlay {
         return (f * f) / 5.0F + 0.4F;
     }
 
-    public static float getCureAlpha(float f) {
-        return (f * f) / 10.0F + 0.4F;
-    }
-
 }

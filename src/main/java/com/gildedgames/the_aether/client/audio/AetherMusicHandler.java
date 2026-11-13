@@ -29,11 +29,7 @@ public class AetherMusicHandler {
         TickEvent.Phase phase = event.phase;
         TickEvent.Type type = event.type;
         GuiScreen screen = Minecraft.getMinecraft().currentScreen;
-        if (AetherConfig.config.get(
-            "Misc",
-            "Toggles the music in the Aether. Disable this if you use another mod that adds custom music (like MusicChoices)",
-            true)
-            .getBoolean()) {
+        if (AetherConfig.musicEnabled()) {
             if (phase == TickEvent.Phase.END) {
                 if (type.equals(TickEvent.Type.CLIENT)) {
                     if (!this.mc.isGamePaused()) {
@@ -50,8 +46,8 @@ public class AetherMusicHandler {
             musicTicker.trackRecord(null);
         }
 
-        if (AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
-            .getBoolean() && Minecraft.getMinecraft().theWorld == null && !(screen instanceof GuiScreenWorking)) {
+        if (AetherConfig.menuEnabled() && Minecraft.getMinecraft().theWorld == null
+            && !(screen instanceof GuiScreenWorking)) {
             if (!musicTicker.playingMenuMusic()) {
                 musicTicker.playMenuMusic();
             }
@@ -81,11 +77,7 @@ public class AetherMusicHandler {
                     .toString()
                     .contains("aether_legacy")
                     && (this.musicTicker.playingMusic() || !this.musicTicker.playingMusic())) {
-                    if (AetherConfig.config.get(
-                        "Misc",
-                        "Toggles the music in the Aether. Disable this if you use another mod that adds custom music (like MusicChoices)",
-                        true)
-                        .getBoolean()) {
+                    if (AetherConfig.musicEnabled()) {
                         event.result = null;
 
                         return;
@@ -97,8 +89,7 @@ public class AetherMusicHandler {
                 .equals("minecraft:music.menu")) {
                 musicTicker.trackMinecraftMusic(sound);
 
-                if (AetherConfig.config.get("Misc", "Enables the Aether Menu", false)
-                    .getBoolean() && Minecraft.getMinecraft().theWorld == null
+                if (AetherConfig.menuEnabled() && Minecraft.getMinecraft().theWorld == null
                     && !(screen instanceof GuiScreenWorking)) {
                     event.result = null;
                 }

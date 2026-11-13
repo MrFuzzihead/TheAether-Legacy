@@ -1,7 +1,5 @@
 package com.gildedgames.the_aether.items.weapons;
 
-import java.util.Random;
-
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
@@ -26,7 +24,7 @@ public class ItemHolystoneSword extends ItemSword {
 
     @Override
     public boolean hitEntity(ItemStack itemstack, EntityLivingBase entityliving, EntityLivingBase entityliving1) {
-        if ((new Random()).nextInt(20) == 0 && entityliving1 != null
+        if (entityliving.worldObj.rand.nextInt(20) == 0 && entityliving1 != null
             && entityliving1 instanceof EntityPlayer
             && entityliving.hurtTime > 0
             && entityliving.deathTime <= 0) {
@@ -35,7 +33,10 @@ public class ItemHolystoneSword extends ItemSword {
             }
         }
 
-        itemstack.damageItem(1, entityliving1);
+        if (entityliving1 != null) {
+            itemstack.damageItem(1, entityliving1);
+        }
+
         return true;
     }
 

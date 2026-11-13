@@ -135,25 +135,76 @@ public class EntitiesAether {
         }
     }
 
-    public static Entity createEntityByID(int id, World p_75616_1_) {
-        Entity entity = null;
-
-        try {
-            Class<?> oclass = getClassFromID(id);
-
-            if (oclass != null) {
-                entity = (Entity) oclass.getConstructor(new Class[] { World.class })
-                    .newInstance(new Object[] { p_75616_1_ });
-            }
-        } catch (Exception exception) {
-            logger.error("Failed to create Aether Entity with id " + id, exception);
+    public static Entity createEntityByID(int id, World world) {
+        switch (id) {
+            case 0:
+                return new EntityMoa(world);
+            case 1:
+                return new EntityPhyg(world);
+            case 2:
+                return new EntityFlyingCow(world);
+            case 3:
+                return new EntitySheepuff(world);
+            case 4:
+                return new EntityAerbunny(world);
+            case 5:
+                return new EntityAerwhale(world);
+            case 6:
+                return new EntitySwet(world);
+            case 7:
+                return new EntityCockatrice(world);
+            case 8:
+                return new EntitySentry(world);
+            case 9:
+                return new EntityZephyr(world);
+            case 10:
+                return new EntityAechorPlant(world);
+            case 11:
+                return new EntityMimic(world);
+            case 12:
+                return new EntitySlider(world);
+            case 13:
+                return new EntityValkyrieQueen(world);
+            case 14:
+                return new EntitySunSpirit(world);
+            case 15:
+                return new EntityDartGolden(world);
+            case 16:
+                return new EntityDartPoison(world);
+            case 17:
+                return new EntityDartEnchanted(world);
+            case 18:
+                return new EntityPoisonNeedle(world);
+            case 19:
+                return new EntityCrystal(world);
+            case 20:
+                return new EntityWhirlwind(world);
+            case 22:
+                return new EntityValkyrie(world);
+            case 23:
+                return new EntityFireMinion(world);
+            case 24:
+                return new EntityMiniCloud(world);
+            case 25:
+                return new EntityFloatingBlock(world);
+            case 26:
+                return new EntityTNTPresent(world);
+            case 27:
+                return new EntityPhoenixArrow(world);
+            case 28:
+                return new EntityZephyrSnowball(world);
+            case 29:
+                return new EntityHammerProjectile(world);
+            case 30:
+                return new EntityLightningKnife(world);
+            case 31:
+                return new EntityParachute(world);
+            case 32:
+                return new EntityAetherItem(world);
+            default:
+                logger.warn("Skipping unknown Aether Entity with id " + id);
+                return null;
         }
-
-        if (entity == null) {
-            logger.warn("Skipping Aether Entity with id " + id);
-        }
-
-        return entity;
     }
 
     public static int getEntityID(Entity p_75619_0_) {

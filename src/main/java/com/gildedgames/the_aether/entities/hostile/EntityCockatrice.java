@@ -51,12 +51,15 @@ public class EntityCockatrice extends EntityMob {
             .setBaseValue(0.25D);
         this.getEntityAttribute(SharedMonsterAttributes.followRange)
             .setBaseValue(35.0D);
-        this.setHealth(10);
+        this.getEntityAttribute(SharedMonsterAttributes.maxHealth)
+            .setBaseValue(10.0D);
+        this.setHealth(10.0F);
     }
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getCockatriceSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getCockatriceSpawnrate())
+            && super.getCanSpawnHere();
     }
 
     @Override
@@ -100,7 +103,7 @@ public class EntityCockatrice extends EntityMob {
     }
 
     public void shootTarget() {
-        if (this.worldObj.difficultySetting == EnumDifficulty.PEACEFUL) {
+        if (this.worldObj.isRemote || this.worldObj.difficultySetting == EnumDifficulty.PEACEFUL) {
             return;
         }
 

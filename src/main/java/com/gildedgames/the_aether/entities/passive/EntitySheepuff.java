@@ -92,7 +92,7 @@ public class EntitySheepuff extends EntityAetherAnimal {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getSheepuffSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getSheepuffSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override

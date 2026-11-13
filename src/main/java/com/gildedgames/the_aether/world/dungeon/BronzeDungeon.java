@@ -337,10 +337,6 @@ public class BronzeDungeon extends AetherDungeon {
 
         roomCount++;
 
-        if (!determineRoomPosition(world, random, new PositionData(x, y, z))) {
-            return false;
-        }
-
         return determineRoomPosition(world, random, new PositionData(x, y, z));
     }
 

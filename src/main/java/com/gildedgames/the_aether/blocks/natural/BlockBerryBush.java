@@ -43,7 +43,7 @@ public class BlockBerryBush extends BlockAetherFlower {
     public void harvestBlock(World world, EntityPlayer entityplayer, int x, int y, int z, int meta) {
         int min, max;
 
-        if (world.getBlock(x, y, z) == BlocksAether.enchanted_aether_grass) {
+        if (world.getBlock(x, y - 1, z) == BlocksAether.enchanted_aether_grass) {
             min = 1;
             max = 4;
         } else {
@@ -67,7 +67,7 @@ public class BlockBerryBush extends BlockAetherFlower {
         if (!this.canBlockStay(world, x, y, z)) {
             int min, max;
 
-            if (world.getBlock(x, y, z) == BlocksAether.enchanted_aether_grass) {
+            if (world.getBlock(x, y - 1, z) == BlocksAether.enchanted_aether_grass) {
                 min = 1;
                 max = 4;
             } else {

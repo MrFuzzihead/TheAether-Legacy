@@ -4,12 +4,9 @@ import java.util.Random;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.stats.StatList;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
@@ -18,6 +15,7 @@ import com.gildedgames.the_aether.blocks.BlocksAether;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.tools.ItemAetherTool;
 import com.gildedgames.the_aether.items.tools.ItemSkyrootTool;
+import com.gildedgames.the_aether.items.util.AetherDropHelper;
 import com.gildedgames.the_aether.items.util.EnumAetherToolType;
 
 public class BlockAetherOre extends Block {
@@ -33,12 +31,11 @@ public class BlockAetherOre extends Block {
 
     @Override
     public void harvestBlock(World worldIn, EntityPlayer player, int x, int y, int z, int meta) {
-        player.addStat(StatList.mineBlockStatArray[getIdFromBlock(this)], 1);
-        player.addExhaustion(0.025F);
+        AetherDropHelper.addMiningStats(player, this);
 
         ItemStack stack = player.getCurrentEquippedItem();
 
-        if (EnchantmentHelper.getEnchantmentLevel(Enchantment.silkTouch.effectId, stack) > 0) {
+        if (AetherDropHelper.hasSilkTouch(stack)) {
             super.harvestBlock(worldIn, player, x, y, z, meta);
 
             return;
@@ -47,13 +44,7 @@ public class BlockAetherOre extends Block {
         if (stack != null && stack.getItem() instanceof ItemSkyrootTool
             && ((ItemAetherTool) stack.getItem()).toolType == EnumAetherToolType.PICKAXE) {
             for (int i = 0; i < 2; ++i) {
-                this.dropBlockAsItem(
-                    worldIn,
-                    x,
-                    y,
-                    z,
-                    meta,
-                    EnchantmentHelper.getEnchantmentLevel(Enchantment.fortune.effectId, stack));
+                AetherDropHelper.dropWithFortune(worldIn, this, x, y, z, meta, stack);
             }
         } else {
             super.harvestBlock(worldIn, player, x, y, z, meta);
@@ -81,10 +72,10 @@ public class BlockAetherOre extends Block {
     }
 
     @Override
-    public int getExpDrop(IBlockAccess p_149690_1_, int p_149690_5_, int p_149690_7_) {
-        Random random = new Random();
+    public int getExpDrop(IBlockAccess access, int meta, int fortune) {
+        Random random = access instanceof World ? ((World) access).rand : new Random();
 
-        if (this.getItemDropped(p_149690_5_, random, p_149690_7_) != Item.getItemFromBlock(this)) {
+        if (this.getItemDropped(meta, random, fortune) != Item.getItemFromBlock(this)) {
             int amount = 0;
 
             if (this == BlocksAether.ambrosium_ore) {

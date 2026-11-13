@@ -24,15 +24,30 @@ public class AetherLoadingScreen extends LoadingScreenRenderer {
 
     private long systemTime = Minecraft.getSystemTime();
 
+    private static Framebuffer sharedFramebuffer;
+
     private Framebuffer framebuffer;
 
     public AetherLoadingScreen(Minecraft mcIn) {
         super(mcIn);
 
         this.mc = mcIn;
+        this.framebuffer = getSharedFramebuffer(mcIn);
+    }
 
-        this.framebuffer = new Framebuffer(mcIn.displayWidth, mcIn.displayHeight, false);
-        this.framebuffer.setFramebufferFilter(9728);
+    private static Framebuffer getSharedFramebuffer(Minecraft mcIn) {
+        int width = Math.max(1, mcIn.displayWidth);
+        int height = Math.max(1, mcIn.displayHeight);
+
+        if (sharedFramebuffer == null) {
+            sharedFramebuffer = new Framebuffer(width, height, false);
+            sharedFramebuffer.setFramebufferFilter(9728);
+        } else if (sharedFramebuffer.framebufferWidth != width || sharedFramebuffer.framebufferHeight != height) {
+            // createBindFramebuffer deletes the old texture/depth buffers first.
+            sharedFramebuffer.createBindFramebuffer(width, height);
+        }
+
+        return sharedFramebuffer;
     }
 
     @Override
@@ -52,6 +67,8 @@ public class AetherLoadingScreen extends LoadingScreenRenderer {
 
     @Override
     public void setLoadingProgress(int progress) {
+        this.framebuffer = getSharedFramebuffer(this.mc);
+
         long j = Minecraft.getSystemTime();
 
         if (j - this.systemTime >= 100L) {

@@ -20,7 +20,11 @@ public class ItemAetherParachute extends Item {
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer entityplayer) {
         ItemStack heldItem = entityplayer.getHeldItem();
 
-        if (EntityParachute.entityHasRoomForCloud(world, entityplayer)) {
+        if (heldItem == null) {
+            return stack;
+        }
+
+        if (!world.isRemote && EntityParachute.entityHasRoomForCloud(world, entityplayer)) {
             if (this == ItemsAether.golden_parachute) {
                 heldItem.damageItem(1, entityplayer);
             } else {

@@ -1,6 +1,7 @@
 package com.gildedgames.the_aether.client.gui;
 
 import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 
@@ -26,7 +27,12 @@ public class GuiSunAltar extends GuiScreen {
 
         this.world = this.mc.theWorld;
 
-        this.buttonList.add(new GuiSunAltarSlider(this.world, this.width / 2 - 75, this.height / 2, "Select Time"));
+        this.buttonList.add(
+            new GuiSunAltarSlider(
+                this.world,
+                this.width / 2 - 75,
+                this.height / 2,
+                I18n.format("gui.sun_altar.select_time")));
     }
 
     @Override
@@ -41,11 +47,9 @@ public class GuiSunAltar extends GuiScreen {
         int k = (this.height - ySize) / 2;
 
         this.drawTexturedModalRect(j, k, 0, 0, xSize, ySize);
-        this.fontRendererObj.drawString(
-            "Sun Altar",
-            (this.width - this.fontRendererObj.getStringWidth("Sun Altar")) / 2,
-            k + 20,
-            0x404040);
+        String title = I18n.format("gui.sun_altar.title");
+        this.fontRendererObj
+            .drawString(title, (this.width - this.fontRendererObj.getStringWidth(title)) / 2, k + 20, 0x404040);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }

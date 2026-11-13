@@ -39,6 +39,7 @@ import com.gildedgames.the_aether.entities.EntitiesAether;
 import com.gildedgames.the_aether.entities.bosses.EntityValkyrie;
 import com.gildedgames.the_aether.entities.passive.mountable.EntityAerbunny;
 import com.gildedgames.the_aether.entities.passive.mountable.EntityFlyingCow;
+import com.gildedgames.the_aether.entities.util.EntityAetherItem;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.dungeon.ItemDungeonKey;
 import com.gildedgames.the_aether.items.util.EnumSkyrootBucketType;
@@ -51,7 +52,6 @@ import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
 import com.gildedgames.the_aether.world.AetherData;
 import com.gildedgames.the_aether.world.AetherWorldProvider;
 
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
 import cpw.mods.fml.common.eventhandler.Event;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.ItemCraftedEvent;
@@ -91,7 +91,7 @@ public class AetherEventHandler {
                 if (!event.entityPlayer.worldObj.isRemote) {
                     Class<?> oclass = EntitiesAether.getClassFromID(itemstack.getItemDamage());
 
-                    if (oclass != null && oclass.isAssignableFrom(this.getClass())) {
+                    if (oclass != null && oclass.isInstance(event.target)) {
                         EntityAgeable entityageable = ((EntityAgeable) event.target)
                             .createChild((EntityAgeable) event.target);
 
@@ -324,7 +324,7 @@ public class AetherEventHandler {
                             .equals("1d680bb6-2a9a-4f25-bf2f-a1af74361d69"))) {
                         if (event.target.worldObj.isRemote) {
                             for (int j = 0; j < 20; j++) {
-                                Random itemRand = new Random();
+                                Random itemRand = event.target.worldObj.rand;
                                 double d = itemRand.nextGaussian() * 0.02D;
                                 double d1 = itemRand.nextGaussian() * 0.02D;
                                 double d2 = itemRand.nextGaussian() * 0.02D;
@@ -356,63 +356,90 @@ public class AetherEventHandler {
 
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent event) {
-        if (!event.world.isRemote) {
-            AetherData data = AetherData.getInstance(event.world);
+        // WorldTickEvent fires for both START and END. The Aether clock must
+        // advance exactly once per tick, and the world's own data should not
+        // be touched from the START half.
+        if (event.phase != TickEvent.Phase.END || event.world.isRemote) {
+            return;
+        }
 
-            WorldProvider provider = event.world.provider;
+        WorldProvider provider = event.world.provider;
 
-            if (provider instanceof AetherWorldProvider) {
-                AetherWorldProvider providerAether = (AetherWorldProvider) provider;
+        if (!(provider instanceof AetherWorldProvider)) {
+            return;
+        }
 
-                // The Aether shares its WorldInfo with the overworld in this
-                // environment (the same reason its clock had to move into
-                // AetherData), so vanilla's WorldInfo-backed rain/thunder
-                // state leaks in: this world's server ramps its rain
-                // strengths off the overworld's flags and broadcasts them to
-                // this dimension. The Aether has no weather — pin the
-                // strengths to zero every tick so skylight darkening,
-                // lightning strikes and rain-driven game logic never fire
-                // here (the per-tick ramp peaks at 0.01, far below
-                // isRaining()'s 0.2 threshold).
-                event.world.prevRainingStrength = 0.0F;
-                event.world.rainingStrength = 0.0F;
-                event.world.prevThunderingStrength = 0.0F;
-                event.world.thunderingStrength = 0.0F;
+        AetherWorldProvider providerAether = (AetherWorldProvider) provider;
+        AetherData data = AetherData.getInstance(event.world);
 
-                providerAether.setIsEternalDay(data.isEternalDay());
+        // The Aether shares its WorldInfo with the overworld in this
+        // environment (the same reason its clock had to move into
+        // AetherData), so vanilla's WorldInfo-backed rain/thunder state leaks
+        // in: this world's server ramps its rain strengths off the overworld's
+        // flags and broadcasts them to this dimension. The Aether has no
+        // weather - pin the strengths to zero every tick so skylight
+        // darkening, lightning strikes and rain-driven game logic never fire
+        // here (the per-tick ramp peaks at 0.01, far below isRaining()'s 0.2
+        // threshold).
+        event.world.prevRainingStrength = 0.0F;
+        event.world.rainingStrength = 0.0F;
+        event.world.prevThunderingStrength = 0.0F;
+        event.world.thunderingStrength = 0.0F;
 
-                // Only broadcast when the shared aether-day state actually
-                // changed instead of every tick.
-                if (providerAether.needsEternalDaySync(data.isEternalDay())) {
-                    AetherNetwork.sendToDimension(
-                        new PacketSendEternalDay(providerAether.getIsEternalDay()),
-                        AetherConfig.getAetherDimensionID());
-                }
+        // Advance the independent Aether clock once here. calculateCelestialAngle
+        // is read-only and must never mutate it.
+        providerAether.updateAetherTime();
 
-                providerAether.setShouldCycleCatchup(data.isShouldCycleCatchup());
+        providerAether.setIsEternalDay(data.isEternalDay());
 
-                if (providerAether.needsShouldCycleSync(data.isShouldCycleCatchup())) {
-                    AetherNetwork.sendToDimension(
-                        new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()),
-                        AetherConfig.getAetherDimensionID());
-                }
-            }
+        // Only broadcast when the shared aether-day state actually changed
+        // instead of every tick.
+        if (providerAether.needsEternalDaySync(data.isEternalDay())) {
+            AetherNetwork.sendToDimension(
+                new PacketSendEternalDay(providerAether.getIsEternalDay()),
+                AetherConfig.getAetherDimensionID());
+        }
+
+        providerAether.setShouldCycleCatchup(data.isShouldCycleCatchup());
+
+        if (providerAether.needsShouldCycleSync(data.isShouldCycleCatchup())) {
+            AetherNetwork.sendToDimension(
+                new PacketSendShouldCycle(providerAether.getShouldCycleCatchup()),
+                AetherConfig.getAetherDimensionID());
         }
     }
 
     @SubscribeEvent
     public void onEntityJoinWorld(EntityJoinWorldEvent event) {
-        // Dungeon keys are made invulnerable so they never despawn. Previously
-        // this was a per-tick scan of every loaded entity in every world (an
-        // O(entities) sweep at 20 tps); the join event fires exactly when the
-        // item spawns, which is strictly better.
-        if (!event.world.isRemote && event.entity instanceof EntityItem) {
+        // Dungeon keys are invulnerable so they never despawn. Swap the normal
+        // EntityItem for EntityAetherItem on join instead of mutating the
+        // private Entity.invulnerable field through reflection.
+        if (!event.world.isRemote && event.entity instanceof EntityItem
+            && !(event.entity instanceof EntityAetherItem)) {
             EntityItem entityItem = (EntityItem) event.entity;
 
             if (entityItem.getEntityItem()
                 .getItem() == ItemsAether.dungeon_key) {
-                ObfuscationReflectionHelper
-                    .setPrivateValue(Entity.class, entityItem, true, "invulnerable", "field_83001_bt");
+                EntityAetherItem replacement = new EntityAetherItem(
+                    event.world,
+                    entityItem.posX,
+                    entityItem.posY,
+                    entityItem.posZ,
+                    entityItem.getEntityItem()
+                        .copy());
+
+                replacement.motionX = entityItem.motionX;
+                replacement.motionY = entityItem.motionY;
+                replacement.motionZ = entityItem.motionZ;
+                replacement.age = entityItem.age;
+                replacement.delayBeforeCanPickup = entityItem.delayBeforeCanPickup;
+                replacement.lifespan = entityItem.lifespan;
+                replacement.hoverStart = entityItem.hoverStart;
+                replacement.rotationYaw = entityItem.rotationYaw;
+                replacement.rotationPitch = entityItem.rotationPitch;
+
+                event.setCanceled(true);
+                event.world.spawnEntityInWorld(replacement);
             }
         }
     }

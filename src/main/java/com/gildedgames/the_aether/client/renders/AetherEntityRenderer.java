@@ -15,8 +15,6 @@ import net.minecraft.util.Vec3;
 
 import com.gildedgames.the_aether.items.tools.ItemValkyrieTool;
 
-import cpw.mods.fml.common.ObfuscationReflectionHelper;
-
 public class AetherEntityRenderer extends EntityRenderer {
 
     private Entity pointedEntity;
@@ -30,8 +28,6 @@ public class AetherEntityRenderer extends EntityRenderer {
 
         this.mc = mc;
         this.previous = previous;
-
-        ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class, this, new AetherItemRenderer(mc), 7);
     }
 
     @Override

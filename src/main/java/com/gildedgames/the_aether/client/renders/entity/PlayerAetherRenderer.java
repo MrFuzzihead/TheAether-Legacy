@@ -45,8 +45,6 @@ public class PlayerAetherRenderer {
 
     private float partialTicks;
 
-    private boolean isCapeRendering;
-
     private static final PlayerAetherRenderer instance = new PlayerAetherRenderer();
 
     public PlayerAetherRenderer() {
@@ -126,7 +124,7 @@ public class PlayerAetherRenderer {
             }
         }
 
-        this.modelMisc.isSneak = this.modelWings.isSneak = this.modelWings.isSneak = playerAether.getEntity()
+        this.modelMisc.isSneak = this.modelWings.isSneak = this.modelGlow.isSneak = playerAether.getEntity()
             .isSneaking();
 
         this.doRender(playerAether, x, y, z, partialTicks);
@@ -139,8 +137,6 @@ public class PlayerAetherRenderer {
     private void doRender(PlayerAether playerAether, double x, double y, double z, float partialTicks) {
         EntityPlayer player = playerAether.getEntity();
 
-        this.modelMisc.onGround = this.modelWings.onGround = this.modelGlow.onGround = playerAether.getEntity()
-            .getSwingProgress(partialTicks);
         this.modelMisc.isRiding = this.modelWings.isRiding = this.modelGlow.isRiding = playerAether.getEntity()
             .isRiding();
         this.modelMisc.isChild = this.modelWings.isChild = this.modelGlow.isChild = playerAether.getEntity()
@@ -196,6 +192,11 @@ public class PlayerAetherRenderer {
             f6 = 1.0F;
         }
 
+        // ModelBiped.onGround is the interpolated limb-swing amount (a float),
+        // not the entity's boolean onGround flag. Vanilla RendererLivingEntity
+        // feeds it the same value.
+        this.modelMisc.onGround = this.modelWings.onGround = this.modelGlow.onGround = f6;
+
         GL11.glEnable(GL11.GL_ALPHA_TEST);
 
         this.modelMisc.setLivingAnimations(player, f7, f6, partialTicks);
@@ -214,10 +215,6 @@ public class PlayerAetherRenderer {
         EntityPlayer player = playerAether.getEntity();
 
         GL11.glPushMatrix();
-
-        this.setCapeRendering(
-            playerAether.getAccessoryInventory()
-                .getStackInSlot(AccessoryType.CAPE) != null);
 
         this.modelMisc.setRotationAngles(
             limbSwing,
@@ -394,15 +391,12 @@ public class PlayerAetherRenderer {
                 .getStackInSlot(AccessoryType.SHIELD)
                 .getItem();
 
-            if (player.motionX == 0.0 && (player.motionY == -0.0784000015258789 || player.motionY == 0.0)
-                && player.motionZ == 0.0
-                && shield.hasInactiveTexture()) {
-                this.mc.getTextureManager()
-                    .bindTexture(shield.texture);
-            } else {
-                this.mc.getTextureManager()
-                    .bindTexture(shield.texture_inactive);
-            }
+            boolean useInactiveTexture = shield.hasInactiveTexture()
+                && !(player.motionX == 0.0 && (player.motionY == -0.0784000015258789 || player.motionY == 0.0)
+                    && player.motionZ == 0.0);
+
+            this.mc.getTextureManager()
+                .bindTexture(useInactiveTexture ? shield.texture_inactive : shield.texture);
 
             GL11.glPushMatrix();
             GL11.glEnable(GL11.GL_BLEND);
@@ -544,14 +538,6 @@ public class PlayerAetherRenderer {
 
     public float getPartialTicks() {
         return this.partialTicks;
-    }
-
-    private void setCapeRendering(boolean isRendering) {
-        this.isCapeRendering = isRendering;
-    }
-
-    public boolean isCapeRendering() {
-        return this.isCapeRendering;
     }
 
     public static PlayerAetherRenderer instance() {

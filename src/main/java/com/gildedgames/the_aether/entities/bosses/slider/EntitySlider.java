@@ -1,9 +1,6 @@
 package com.gildedgames.the_aether.entities.bosses.slider;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
@@ -34,7 +31,6 @@ import com.gildedgames.the_aether.entities.util.EntityAetherItem;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.player.PlayerAether;
 import com.gildedgames.the_aether.registry.achievements.AchievementsAether;
-import com.google.common.collect.Lists;
 
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.relauncher.Side;
@@ -383,24 +379,26 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
         this.worldObj.spawnParticle("smoke", a, b, c, 0.0D, 0.0D, 0.0D);
     }
 
-    private boolean checkIsAir(int x1, int y1, int z1, int x2, int y2, int z2) {
-        ArrayList<Block> blockList = Lists.newArrayListWithCapacity(9);
+    static boolean checkIsAir(World world, int x1, int y1, int z1, int x2, int y2, int z2) {
+        Block firstBlock = null;
+        boolean foundBlock = false;
 
         for (int x = x1; x < x2 + 1; x++) {
             for (int z = z1; z < z2 + 1; z++) {
                 for (int y = y1; y < y2 + 1; y++) {
-                    blockList.add(this.worldObj.getBlock(x, y, z));
+                    Block block = world.getBlock(x, y, z);
+
+                    if (!foundBlock) {
+                        firstBlock = block;
+                        foundBlock = true;
+                    } else if (block != firstBlock) {
+                        return false;
+                    }
                 }
             }
         }
 
-        Set<Block> blockSet = new HashSet<>(blockList);
-
-        if (blockSet.size() == 1) {
-            return blockList.get(1) == Blocks.air;
-        }
-
-        return false;
+        return foundBlock && world.isAirBlock(x1, y1, z1);
     }
 
     private void openDoor() {
@@ -415,6 +413,7 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
 
     private void closeDoor() {
         if (checkIsAir(
+            this.worldObj,
             this.dungeonX + 15,
             this.dungeonY + 1,
             this.dungeonZ + 6,
@@ -433,6 +432,7 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
                 }
             }
         } else if (checkIsAir(
+            this.worldObj,
             this.dungeonX,
             this.dungeonY + 1,
             this.dungeonZ + 6,
@@ -451,6 +451,7 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
                     }
                 }
             } else if (checkIsAir(
+                this.worldObj,
                 this.dungeonX + 6,
                 this.dungeonY + 1,
                 this.dungeonZ + 15,
@@ -469,6 +470,7 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
                         }
                     }
                 } else if (checkIsAir(
+                    this.worldObj,
                     this.dungeonX + 6,
                     this.dungeonY + 1,
                     this.dungeonZ,
@@ -704,8 +706,10 @@ public class EntitySlider extends EntityFlying implements IAetherBoss {
 
         this.hurtAngle = 0.7F - (this.getHealth() / 875F);
 
-        PlayerAether.get(player)
-            .setFocusedBoss(this);
+        if (this.getHealth() > 0.0F && !this.isDead) {
+            PlayerAether.get(player)
+                .setFocusedBoss(this);
+        }
 
         return flag;
     }

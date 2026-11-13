@@ -19,6 +19,10 @@ public class BlockIcestone extends Block {
 
     @Override
     public void onBlockAdded(World worldIn, int xIn, int yIn, int zIn) {
+        if (worldIn.isRemote) {
+            return;
+        }
+
         for (int x = xIn - 3; x <= (xIn + 3); ++x) {
             for (int y = yIn - 3; y <= (yIn + 3); ++y) {
                 for (int z = zIn - 3; z <= (zIn + 3); ++z) {

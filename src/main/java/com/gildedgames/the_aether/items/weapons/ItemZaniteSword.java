@@ -22,7 +22,7 @@ public class ItemZaniteSword extends ItemSword {
 
     @Override
     public Multimap<String, AttributeModifier> getItemAttributeModifiers() {
-        return null;
+        return super.getItemAttributeModifiers();
     }
 
     @Override

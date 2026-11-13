@@ -47,6 +47,8 @@ public enum EnumCrystalType {
     }
 
     public static EnumCrystalType get(int id) {
-        return values()[id];
+        EnumCrystalType[] values = values();
+
+        return id >= 0 && id < values.length ? values[id] : FIRE;
     }
 }

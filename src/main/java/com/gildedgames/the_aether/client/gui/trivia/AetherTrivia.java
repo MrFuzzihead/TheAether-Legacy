@@ -4,44 +4,62 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.I18n;
 
 import com.gildedgames.the_aether.Aether;
-import com.google.common.collect.Lists;
 
 public class AetherTrivia {
 
-    private static Random random = new Random();
+    private static final Random random = new Random();
+
+    private static final Map<String, List<String>> entriesByLanguage = new HashMap<String, List<String>>();
 
     public AetherTrivia() {
 
     }
 
     public static String getNewTrivia() {
-
         String localization = Minecraft.getMinecraft()
             .getLanguageManager()
             .getCurrentLanguage()
             .getLanguageCode();
+        List<String> entries = getEntries(localization);
 
-        if (getEntriesForLocalization(localization) != null) {
-            return getEntriesForLocalization(localization);
-        } else if (getEntriesForLocalization("en_US") != null) {
-            return getEntriesForLocalization("en_US");
-        } else {
-            return "missingno";
+        if (entries.isEmpty()) {
+            entries = getEntries("en_US");
         }
+
+        return entries.isEmpty() ? "missingno" : formatEntry(entries);
     }
 
     public static String getEntriesForLocalization(String localization) {
+        List<String> entries = getEntries(localization);
+
+        return entries.isEmpty() ? null : formatEntry(entries);
+    }
+
+    private static String formatEntry(List<String> entries) {
+        return I18n.format("gui.aether_trivia.pro_tip") + " " + entries.get(random.nextInt(entries.size()));
+    }
+
+    private static List<String> getEntries(String localization) {
+        List<String> cached = entriesByLanguage.get(localization);
+
+        if (cached != null) {
+            return cached;
+        }
+
+        List<String> entries = new ArrayList<String>();
         BufferedReader bufferedreader = null;
 
         try {
-            List<String> list = Lists.newArrayList();
             bufferedreader = new BufferedReader(
                 new InputStreamReader(
                     Minecraft.getMinecraft()
@@ -49,18 +67,14 @@ public class AetherTrivia {
                         .getResource(Aether.locate("texts/" + localization + ".txt"))
                         .getInputStream(),
                     StandardCharsets.UTF_8));
-            String s;
+            String line;
 
-            while ((s = bufferedreader.readLine()) != null) {
-                s = s.trim();
+            while ((line = bufferedreader.readLine()) != null) {
+                line = line.trim();
 
-                if (!s.isEmpty()) {
-                    list.add(s);
+                if (!line.isEmpty()) {
+                    entries.add(line);
                 }
-            }
-
-            if (!list.isEmpty()) {
-                return I18n.format("gui.aether_trivia.pro_tip") + " " + list.get(random.nextInt(list.size()));
             }
         } catch (IOException ignore) {} finally {
             if (bufferedreader != null) {
@@ -70,6 +84,8 @@ public class AetherTrivia {
             }
         }
 
-        return null;
+        entriesByLanguage.put(localization, entries);
+
+        return entries;
     }
 }

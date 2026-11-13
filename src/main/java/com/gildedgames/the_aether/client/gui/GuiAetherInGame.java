@@ -36,7 +36,7 @@ public class GuiAetherInGame extends Gui {
 
     @SubscribeEvent
     public void onRenderGui(RenderGameOverlayEvent event) {
-        if (event.isCancelable() || event.type != ElementType.TEXT) {
+        if (event.type != ElementType.TEXT) {
             return;
         }
 

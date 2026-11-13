@@ -53,6 +53,8 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     public int chatLog;
     public int chatCount;
 
+    public boolean hasDefeated;
+
     public int direction;
     public double rotary;
     public double velocity;
@@ -135,6 +137,7 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
         tag.setInteger("chatLog", this.getChatLine());
         tag.setString("bossName", this.getName());
         tag.setBoolean("isFreezing", this.isFreezing());
+        tag.setBoolean("hasDefeated", this.hasDefeated);
     }
 
     public void readEntityFromNBT(NBTTagCompound tag) {
@@ -148,6 +151,7 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
         this.setChatLine(tag.getInteger("chatLog"));
         this.setBossName(tag.getString("bossName"));
         this.setFreezing(tag.getBoolean("isFreezing"));
+        this.hasDefeated = tag.getBoolean("hasDefeated");
     }
 
     @Override
@@ -240,33 +244,34 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
                 playerAether.setFocusedBoss(this);
             }
 
-            if (this.isDead()) {
+            if (this.isDead() && !this.hasDefeated) {
+                this.hasDefeated = true;
                 this.setFreezing(true);
                 this.chatLine(dungeonTarget, "\u00a7b" + StatCollector.translateToLocal("gui.spirit.dead"));
                 this.chatCount = 100;
 
-                for (int i = 0; i < dungeonPlayers.size(); ++i) {
-                    Entity entity = (Entity) dungeonPlayers.get(i);
+                if (!this.worldObj.isRemote) {
+                    for (int i = 0; i < dungeonPlayers.size(); ++i) {
+                        Entity entity = (Entity) dungeonPlayers.get(i);
 
-                    if (entity instanceof EntityPlayer) {
-                        ((EntityPlayer) entity).triggerAchievement(AchievementsAether.defeat_gold);
+                        if (entity instanceof EntityPlayer) {
+                            ((EntityPlayer) entity).triggerAchievement(AchievementsAether.defeat_gold);
+                        }
                     }
-                }
 
-                dungeonTarget.triggerAchievement(AchievementsAether.defeat_gold);
+                    dungeonTarget.triggerAchievement(AchievementsAether.defeat_gold);
 
-                if (!AetherConfig.eternalDayDisabled()) {
-                    if (!this.worldObj.isRemote) {
+                    if (!AetherConfig.eternalDayDisabled()) {
                         if (!AetherData.getInstance(this.worldObj)
                             .isEternalDay()) {
                             AetherData.getInstance(this.worldObj)
                                 .setEternalDay(true);
                         }
                     }
-                }
 
-                this.setDoor(Blocks.air);
-                this.unlockTreasure();
+                    this.setDoor(Blocks.air);
+                    this.unlockTreasure();
+                }
             }
         }
 
@@ -356,6 +361,10 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     }
 
     public void burnEntities() {
+        if (this.worldObj.isRemote) {
+            return;
+        }
+
         List<?> entityList = this.worldObj
             .getEntitiesWithinAABBExcludingEntity(this, this.boundingBox.expand(0.0D, 4.0D, 0.0D));
 
@@ -370,6 +379,10 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     }
 
     public void evapWater() {
+        if (this.worldObj.isRemote || this.ticksExisted % 10 != 0) {
+            return;
+        }
+
         int var1 = MathHelper
             .floor_double(this.boundingBox.minX + (this.boundingBox.maxX - this.boundingBox.minX) / 2.0D);
         int var2 = MathHelper
@@ -441,6 +454,10 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     }
 
     public void summonFire() {
+        if (this.worldObj.isRemote) {
+            return;
+        }
+
         int x = MathHelper.floor_double(this.posX);
         int z = MathHelper.floor_double(this.posZ);
         int y = this.originPointY - 2;
@@ -454,11 +471,8 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
         Side side = FMLCommonHandler.instance()
             .getEffectiveSide();
 
-        if (this.chatCount <= 0
-            || (!AetherConfig.repeatSunSpiritDialogue() && ((PlayerAether) AetherAPI.get(player)).seenSpiritDialog)) {
-            if (side == Side.CLIENT) {
-                Aether.proxy.sendMessage(player, s);
-            }
+        if (side == Side.CLIENT) {
+            Aether.proxy.sendMessage(player, s);
         }
     }
 
@@ -606,6 +620,10 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     }
 
     private void setDoor(Block block) {
+        if (this.worldObj.isRemote) {
+            return;
+        }
+
         int x, y, z;
 
         if (this.direction / 2 == 0) {
@@ -628,6 +646,10 @@ public class EntitySunSpirit extends EntityFlying implements IMob, IAetherBoss, 
     }
 
     private void unlockTreasure() {
+        if (this.worldObj.isRemote) {
+            return;
+        }
+
         int x, y, z;
 
         if (this.direction / 2 == 0) {

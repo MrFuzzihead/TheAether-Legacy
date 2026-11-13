@@ -214,19 +214,22 @@ public class EntityWhirlwind extends EntityMob {
                 entity.motionZ += Math.cos(0.01745329424738884D * d20) * 0.0099999997764825821D;
             }
 
-            if (!this.worldObj.isAirBlock((int) this.posX, (int) this.posY, (int) this.posZ)) {
-                this.lifeLeft -= 50;
-            }
+        }
 
-            if (this.worldObj.getGameRules()
-                .getGameRuleBooleanValue("mobGriefing")) {
-                int i2 = (MathHelper.floor_double(this.posX) - 1) + this.rand.nextInt(3);
-                int j2 = MathHelper.floor_double(this.posY) + this.rand.nextInt(5);
-                int k2 = (MathHelper.floor_double(this.posZ) - 1) + this.rand.nextInt(3);
+        // These checks are per-whirlwind, not per nearby entity. Running them
+        // inside the loop made their cost scale with the entity count.
+        if (!this.worldObj.isAirBlock((int) this.posX, (int) this.posY, (int) this.posZ)) {
+            this.lifeLeft -= 50;
+        }
 
-                if (this.worldObj.getBlock(i2, j2, k2) instanceof BlockLeaves) {
-                    this.worldObj.setBlock(i2, j2, k2, Blocks.air);
-                }
+        if (this.worldObj.getGameRules()
+            .getGameRuleBooleanValue("mobGriefing")) {
+            int i2 = (MathHelper.floor_double(this.posX) - 1) + this.rand.nextInt(3);
+            int j2 = MathHelper.floor_double(this.posY) + this.rand.nextInt(5);
+            int k2 = (MathHelper.floor_double(this.posZ) - 1) + this.rand.nextInt(3);
+
+            if (this.worldObj.getBlock(i2, j2, k2) instanceof BlockLeaves) {
+                this.worldObj.setBlock(i2, j2, k2, Blocks.air);
             }
         }
     }
@@ -314,26 +317,22 @@ public class EntityWhirlwind extends EntityMob {
             }
         }
 
-        if (this.particles.size() > 0) {
-            for (int i1 = 0; i1 < this.particles.size(); i1++) {
-                AetherParticle particle = (AetherParticle) this.particles.get(i1);
+        for (int i1 = this.particles.size() - 1; i1 >= 0; --i1) {
+            AetherParticle particle = (AetherParticle) this.particles.get(i1);
 
-                if (particle.isDead) {
-                    this.particles.remove(particle);
-                } else {
-                    double d10 = particle.getX();
-                    double d12 = particle.boundingBox.minY;
-                    double d14 = particle.getZ();
-                    double d16 = this.getDistanceToEntity(particle);
-                    double d18 = d12 - this.posY;
-                    particle.setMotionY(0.11500000208616257D);
-                    double d21 = Math.atan2(this.posX - d10, this.posZ - d14) / 0.01745329424738884D;
-                    d21 += 160D;
-                    particle
-                        .setMotionX(-Math.cos(0.01745329424738884D * d21) * (d16 * 2.5D - d18) * 0.10000000149011612D);
-                    particle
-                        .setMotionZ(Math.sin(0.01745329424738884D * d21) * (d16 * 2.5D - d18) * 0.10000000149011612D);
-                }
+            if (particle.isDead) {
+                this.particles.remove(i1);
+            } else {
+                double d10 = particle.getX();
+                double d12 = particle.boundingBox.minY;
+                double d14 = particle.getZ();
+                double d16 = this.getDistanceToEntity(particle);
+                double d18 = d12 - this.posY;
+                particle.setMotionY(0.11500000208616257D);
+                double d21 = Math.atan2(this.posX - d10, this.posZ - d14) / 0.01745329424738884D;
+                d21 += 160D;
+                particle.setMotionX(-Math.cos(0.01745329424738884D * d21) * (d16 * 2.5D - d18) * 0.10000000149011612D);
+                particle.setMotionZ(Math.sin(0.01745329424738884D * d21) * (d16 * 2.5D - d18) * 0.10000000149011612D);
             }
         }
     }
@@ -390,7 +389,7 @@ public class EntityWhirlwind extends EntityMob {
         int j = MathHelper.floor_double(this.boundingBox.minY);
         int k = MathHelper.floor_double(this.posZ);
 
-        return this.rand.nextInt(AetherConfig.getWhirlwindSpawnrate()) == 0
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getWhirlwindSpawnrate())
             && this.worldObj.getBlock(i, j - 1, k) == BlocksAether.aether_grass
             && this.worldObj.getBlockLightValue(i, j, k) > 8
             && this.worldObj.checkNoEntityCollision(this.boundingBox)

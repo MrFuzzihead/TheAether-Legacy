@@ -26,11 +26,6 @@ public class FilledList<E> extends AbstractList<E> {
     }
 
     @Override
-    public void add(int index, E element) {
-        this.list.add(element);
-    }
-
-    @Override
     public E get(int index) {
         return this.list.get(index);
     }

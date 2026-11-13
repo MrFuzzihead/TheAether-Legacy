@@ -29,10 +29,12 @@ public class ItemVampireBlade extends ItemSword {
 
     @Override
     public boolean hitEntity(ItemStack stack, EntityLivingBase target, EntityLivingBase attacker) {
-        EntityPlayer player = (EntityPlayer) attacker;
+        if (attacker instanceof EntityPlayer) {
+            EntityPlayer player = (EntityPlayer) attacker;
 
-        if (player.getHealth() < player.getMaxHealth()) {
-            player.heal(1.0F);
+            if (player.getHealth() < player.getMaxHealth()) {
+                player.heal(1.0F);
+            }
         }
 
         return super.hitEntity(stack, target, attacker);

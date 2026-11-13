@@ -71,7 +71,7 @@ public class EntityFlyingCow extends EntitySaddleMount {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getFlyingCowSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getFlyingCowSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override
@@ -128,14 +128,8 @@ public class EntityFlyingCow extends EntitySaddleMount {
     }
 
     private void fall() {
-        if (!this.onGround) {
-            if (this.motionY < 0.0D && !this.isRiderSneaking()) {
-                this.motionY *= 0.6D;
-            }
-
-            if (this.onGround && !this.worldObj.isRemote) {
-                this.jumpsRemaining = this.maxJumps;
-            }
+        if (!this.onGround && this.motionY < 0.0D && !this.isRiderSneaking()) {
+            this.motionY *= 0.6D;
         }
     }
 

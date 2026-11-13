@@ -27,6 +27,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
 import com.gildedgames.the_aether.api.accessories.AccessoryType;
+import com.gildedgames.the_aether.compatibility.client.BattlegearRenderCompat;
 import com.gildedgames.the_aether.items.ItemsAether;
 import com.gildedgames.the_aether.items.accessories.ItemAccessory;
 import com.gildedgames.the_aether.player.PlayerAether;
@@ -389,7 +390,7 @@ public class AetherItemRenderer extends ItemRenderer {
         RenderHelper.disableStandardItemLighting();
 
         if (Loader.isModLoaded("battlegear2")) {
-            mods.battlegear2.client.utils.BattlegearRenderHelper.renderItemInFirstPerson(partialTicks, mc, this);
+            BattlegearRenderCompat.renderItemInFirstPerson(partialTicks, mc, this);
         }
     }
 

@@ -79,20 +79,27 @@ public class GuiValkyrieDialogue extends GuiDialogue {
     }
 
     private String getMedalDiaulogue() {
+        int medals = 0;
+        int firstMedalSlot = -1;
+
         for (int slotId = 0; slotId < this.mc.thePlayer.inventory.mainInventory.length; ++slotId) {
             ItemStack stack = this.mc.thePlayer.inventory.mainInventory[slotId];
 
             if (stack != null && stack.getItem() == ItemsAether.victory_medal) {
-                if (stack.stackSize >= 10) {
-                    this.medalSlotId = slotId;
-                    return I18n.format("gui.valkyrie.dialog.player.havemedals");
-                } else {
-                    return I18n.format("gui.valkyrie.dialog.player.lackmedals") + " (" + stack.stackSize + "/10)";
+                if (firstMedalSlot == -1) {
+                    firstMedalSlot = slotId;
                 }
+
+                medals += stack.stackSize;
             }
         }
 
-        return I18n.format("gui.valkyrie.dialog.player.lackmedals") + " (0/10)";
+        if (medals >= 10) {
+            this.medalSlotId = firstMedalSlot;
+            return I18n.format("gui.valkyrie.dialog.player.havemedals");
+        }
+
+        return I18n.format("gui.valkyrie.dialog.player.lackmedals") + " (" + medals + "/10)";
     }
 
 }
