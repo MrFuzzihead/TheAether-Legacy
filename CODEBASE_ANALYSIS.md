@@ -1719,7 +1719,7 @@ Status key:
 | R08b | Repeated client config lookups | Done | Use cached getters; menu toggle updates cache | None |
 | R09 | Unify dungeon base classes | Won't fix | Keep both documented classes; revisit only for new dungeon types | None |
 | R10 | Dialogue/perk scaffolding | Done | Removed unused generic dialogue and unreachable perk UI | None |
-| R11 | Feature gaps | Decision | OreDictionary, localization, and config validation done; NEI next | Which features are in scope? |
+| R11 | Feature gaps | Decision | OreDictionary, localization, config validation, and NEI viewer done; loot tables next | Which features are in scope? |
 
 ### R01 - B29 and golden-island vegetation
 
@@ -1921,7 +1921,7 @@ scope is:
 | Item | Current state | Effort | Risk |
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
-| Optional NEI handlers | No NEI integration beyond the runtime dependency | Medium | Low-medium |
+| Optional NEI handlers | Partial: enchanter/freezer recipe viewer implemented; overlays and incubator deferred | Medium | Low-medium |
 | Config validation | Done: IDs and spawn rates validated; 0 disables spawns; EndlessIDs limits honored | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
@@ -1947,14 +1947,21 @@ Game-test coverage now verifies that each tag contains the expected item.
 
 #### Optional NEI handlers
 
-There are no NEI recipe handlers today. The useful targets are:
+**Status:** partial. The enchanter and freezer recipe viewer is implemented.
 
-- Enchanter recipes from the `AetherEnchantment` registry.
-- Freezer recipes from the `AetherFreezable` registry.
-- Incubator recipes only if there is a meaningful recipe representation.
+- NEI is now a `devOnlyNonPublishable` dependency so the handlers can be tested
+  in the development client without becoming a published dependency.
+- `NEIAetherConfig` is discovered by NEI's client plugin loader.
+- `AetherEnchanterRecipeHandler` and `AetherFreezerRecipeHandler` expose the
+  existing `AetherAPI` enchanter/freezer recipes with the correct input, fuel,
+  and output slot positions.
+- Both machines are registered as recipe catalysts.
 
-This needs a compile-time NEI API dependency, a compatibility plugin loaded only
-when NEI is present, and guarded imports so NEI remains optional.
+Deferred for later passes:
+
+- GUI overlay and automatic ingredient transfer.
+- Incubator support, which has no recipe registry yet.
+- Additional NEI categories or recipe metadata.
 
 #### Config validation
 
@@ -2033,17 +2040,18 @@ game-test, and release workflows. OreDictionary registration, localization key
 parity, and config validation now have coverage. Remaining feature-specific tests:
 
 - Loot table selection tests.
-- NEI handler tests when handlers are added.
+- NEI client smoke testing for the enchanter/freezer recipe tabs.
 - More boss-arena game tests.
 
 #### Recommended order
 
-1. Optional NEI handlers - compatibility work with more setup.
-2. Loot table extraction/refactor - fix behavior first, then data-drive it.
-3. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+1. Loot table extraction/refactor - fix behavior first, then data-drive it.
+2. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
+3. NEI GUI overlays/transfer and incubator support - optional follow-ups.
 
-OreDictionary coverage, localization key parity, and config validation are
-complete. Optional NEI handlers are the next recommended task.
+OreDictionary coverage, localization key parity, config validation, and the
+enchanter/freezer NEI recipe viewer are complete. Loot tables are the next
+recommended task.
 
 **Decision needed:** which of these are in scope for this project cycle?
 
