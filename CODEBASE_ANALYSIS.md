@@ -1921,7 +1921,7 @@ scope is:
 | Item | Current state | Effort | Risk |
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
-| Optional NEI handlers | Partial: enchanter/freezer recipe viewer implemented; overlays and incubator deferred | Medium | Low-medium |
+| Optional NEI handlers | Partial: enchanter/freezer/incubator recipe viewer implemented; overlays deferred | Medium | Low-medium |
 | Config validation | Done: IDs and spawn rates validated; 0 disables spawns; EndlessIDs limits honored | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
@@ -1947,7 +1947,7 @@ Game-test coverage now verifies that each tag contains the expected item.
 
 #### Optional NEI handlers
 
-**Status:** partial. The enchanter and freezer recipe viewer is implemented.
+**Status:** partial. The enchanter, freezer, and incubator recipe viewer is implemented.
 
 - NEI is now a `devOnlyNonPublishable` dependency so the handlers can be tested
   in the development client without becoming a published dependency.
@@ -1955,12 +1955,15 @@ Game-test coverage now verifies that each tag contains the expected item.
 - `AetherEnchanterRecipeHandler` and `AetherFreezerRecipeHandler` expose the
   existing `AetherAPI` enchanter/freezer recipes with the correct input, fuel,
   and output slot positions.
-- Both machines are registered as recipe catalysts.
+- `AetherIncubatorRecipeHandler` shows every Moa egg type, the Ambrosium Torch
+  fuel, the incubator flame/progress animation, and a hatch message.
+- All three machines are registered as recipe catalysts, and their NEI tabs use
+  the block icon instead of a truncated text label.
 
 Deferred for later passes:
 
 - GUI overlay and automatic ingredient transfer.
-- Incubator support, which has no recipe registry yet.
+- A rendered Moa model on the incubator page; the first pass uses text.
 - Additional NEI categories or recipe metadata.
 
 #### Config validation

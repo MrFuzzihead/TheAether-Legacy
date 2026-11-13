@@ -1,5 +1,6 @@
 package com.gildedgames.the_aether.compatibility.nei;
 
+import java.awt.Rectangle;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,6 +34,11 @@ public class AetherEnchanterRecipeHandler extends TemplateRecipeHandler {
     @Override
     public Class<? extends GuiContainer> getGuiClass() {
         return GuiEnchanter.class;
+    }
+
+    @Override
+    public void loadTransferRects() {
+        transferRects.add(new RecipeTransferRect(new Rectangle(74, 23, 24, 18), "aether_enchanter"));
     }
 
     @Override
