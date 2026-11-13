@@ -1,7 +1,7 @@
 package com.gildedgames.the_aether.compatibility.nei;
 
 import java.awt.Rectangle;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.client.gui.inventory.GuiContainer;
@@ -71,6 +71,16 @@ public class AetherEnchanterRecipeHandler extends TemplateRecipeHandler {
 
     @Override
     public void loadUsageRecipes(ItemStack ingredient) {
+        if (ingredient == null) {
+            return;
+        }
+
+        if (AetherAPI.instance()
+            .isEnchantmentFuel(ingredient)) {
+            loadCraftingRecipes("aether_enchanter");
+            return;
+        }
+
         for (AetherEnchantment recipe : AetherAPI.instance()
             .getEnchantmentValues()) {
             if (NEIServerUtils.areStacksSameTypeCrafting(recipe.getInput(), ingredient)) {
@@ -111,12 +121,7 @@ public class AetherEnchanterRecipeHandler extends TemplateRecipeHandler {
 
         @Override
         public List<PositionedStack> getIngredients() {
-            return Collections.singletonList(this.input);
-        }
-
-        @Override
-        public List<PositionedStack> getOtherStacks() {
-            return Collections.singletonList(this.fuel);
+            return Arrays.asList(this.input, this.fuel);
         }
 
         @Override
