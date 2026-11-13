@@ -114,12 +114,13 @@ tasks.named("check") {
 }
 
 val prepareGameTestServer = tasks.register("prepareGameTestServer") {
+    val configuredRunDir = project.findProperty("runServerWorkingDirectory") as String? ?: "run/server"
+    val serverDir = project.layout.projectDirectory.dir(configuredRunDir).asFile
+
     group = "verification"
     description = "Creates the dedicated-server run directory and accepts the Minecraft EULA for game tests"
 
     doLast {
-        val configuredRunDir = project.findProperty("runServerWorkingDirectory") as String? ?: "run/server"
-        val serverDir = project.layout.projectDirectory.dir(configuredRunDir).asFile
         serverDir.mkdirs()
         val eula = serverDir.resolve("eula.txt")
         if (!eula.exists()) {
