@@ -106,7 +106,8 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
     public void drawBackground(int recipe) {
         GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
         GuiDraw.changeTexture(getGuiTexture());
-        GuiDraw.drawTexturedModalRect(0, 0, 5, 11, 166, 95);
+        GuiDraw.drawTexturedModalRect(0, 0, 5, 11, 166, 65);
+        GuiDraw.drawRect(0, 65, 166, 30, 0xFFC6C6C6);
     }
 
     @Override
@@ -130,7 +131,7 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
             GuiDraw.drawString(value, x, 76 + line * 10, 0x404040, false);
         }
 
-        pair.renderMoa(124, 44);
+        pair.renderMoa(132, 44);
     }
 
     public class IncubatorPair extends CachedRecipe {
@@ -191,10 +192,11 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
             GL11.glRotatef(180.0F, 0.0F, 0.0F, 1.0F);
             GL11.glRotatef(135.0F, 0.0F, 1.0F, 0.0F);
             GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
-            RenderHelper.enableStandardItemLighting();
+            RenderHelper.disableStandardItemLighting();
+            GL11.glDisable(GL11.GL_LIGHTING);
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
             RenderManager.instance.renderEntityWithPosYaw(this.previewMoa, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
-            RenderHelper.disableStandardItemLighting();
+            GL11.glEnable(GL11.GL_LIGHTING);
             GL11.glPopMatrix();
         }
     }
