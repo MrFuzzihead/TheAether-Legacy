@@ -1947,7 +1947,7 @@ Game-test coverage now verifies that each tag contains the expected item.
 
 #### Optional NEI handlers
 
-**Status:** partial. The enchanter, freezer, and incubator recipe viewer is implemented.
+**Status:** completed. The enchanter, freezer, and incubator recipe viewer, GUI overlay, automatic transfer, and Moa preview are implemented.
 
 - NEI is now a `devOnlyNonPublishable` dependency so the handlers can be tested
   in the development client without becoming a published dependency.

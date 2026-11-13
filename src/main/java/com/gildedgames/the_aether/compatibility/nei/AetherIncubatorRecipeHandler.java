@@ -6,6 +6,7 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiContainer;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.resources.I18n;
@@ -102,6 +103,13 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
     }
 
     @Override
+    public void drawBackground(int recipe) {
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GuiDraw.changeTexture(getGuiTexture());
+        GuiDraw.drawTexturedModalRect(0, 0, 5, 11, 166, 95);
+    }
+
+    @Override
     public void drawExtras(int recipe) {
         IncubatorPair pair = (IncubatorPair) arecipes.get(recipe);
 
@@ -113,9 +121,16 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
         int progress = (cycleticks % 80) * 54 / 80;
         GuiDraw.drawTexturedModalRect(98, 59 - progress, 179, 70 - progress, 10, progress);
 
-        GuiDraw.drawString(pair.typeLabel + " - " + I18n.format("gui.incubator.moa_hatches"), 8, 56, 0x404040, false);
+        List<String> text = GuiDraw.fontRenderer
+            .listFormattedStringToWidth(pair.typeLabel + " - " + I18n.format("gui.incubator.moa_hatches"), 150);
 
-        pair.renderMoa(122, 58);
+        for (int line = 0; line < text.size(); line++) {
+            String value = text.get(line);
+            int x = (166 - GuiDraw.fontRenderer.getStringWidth(value)) / 2;
+            GuiDraw.drawString(value, x, 76 + line * 10, 0x404040, false);
+        }
+
+        pair.renderMoa(124, 44);
     }
 
     public class IncubatorPair extends CachedRecipe {
@@ -175,7 +190,9 @@ public class AetherIncubatorRecipeHandler extends TemplateRecipeHandler {
             GL11.glScalef(-11.0F, 11.0F, 11.0F);
             GL11.glRotatef(180.0F, 0.0F, 0.0F, 1.0F);
             GL11.glRotatef(135.0F, 0.0F, 1.0F, 0.0F);
+            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             RenderHelper.enableStandardItemLighting();
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240.0F, 240.0F);
             RenderManager.instance.renderEntityWithPosYaw(this.previewMoa, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F);
             RenderHelper.disableStandardItemLighting();
             GL11.glPopMatrix();

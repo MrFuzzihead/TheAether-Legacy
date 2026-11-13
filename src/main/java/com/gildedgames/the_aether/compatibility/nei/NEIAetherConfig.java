@@ -42,14 +42,18 @@ public class NEIAetherConfig implements IConfigureNEI {
         API.addRecipeCatalyst(new ItemStack(BlocksAether.incubator), incubator);
         API.registerGuiOverlay(GuiIncubator.class, "aether_incubator");
         API.registerGuiOverlayHandler(GuiIncubator.class, new AetherMachineOverlayHandler(), "aether_incubator");
-        registerHandlerInfo(AetherIncubatorRecipeHandler.class, new ItemStack(BlocksAether.incubator));
+        registerHandlerInfo(AetherIncubatorRecipeHandler.class, new ItemStack(BlocksAether.incubator), 95);
     }
 
     private static void registerHandlerInfo(Class<?> handlerClass, ItemStack icon) {
+        registerHandlerInfo(handlerClass, icon, 65);
+    }
+
+    private static void registerHandlerInfo(Class<?> handlerClass, ItemStack icon, int height) {
         HandlerInfo info = new HandlerInfo.Builder(handlerClass.getName(), "Aether Legacy", "aether_legacy")
             .setDisplayStack(icon)
             .setWidth(166)
-            .setHeight(65)
+            .setHeight(height)
             .setMultipleWidgetsAllowed(false)
             .build();
 
