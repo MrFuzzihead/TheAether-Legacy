@@ -108,7 +108,7 @@ public class EntityMoa extends EntitySaddleMount {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getMoaSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getMoaSpawnrate()) && super.getCanSpawnHere();
     }
 
     public boolean isSitting() {

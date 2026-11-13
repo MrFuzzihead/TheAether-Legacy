@@ -58,7 +58,8 @@ public class EntityCockatrice extends EntityMob {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getCockatriceSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getCockatriceSpawnrate())
+            && super.getCanSpawnHere();
     }
 
     @Override

@@ -1,6 +1,10 @@
 package com.gildedgames.the_aether;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Random;
 
 import org.junit.Test;
 
@@ -8,9 +12,17 @@ public class AetherConfigTest {
 
     @Test
     public void configValidationClampsSpawnRates() {
-        assertEquals(1, AetherConfig.validateSpawnRate("Test", 0));
-        assertEquals(1, AetherConfig.validateSpawnRate("Test", -5));
+        assertEquals(0, AetherConfig.validateSpawnRate("Test", 0));
+        assertEquals(0, AetherConfig.validateSpawnRate("Test", -5));
         assertEquals(25, AetherConfig.validateSpawnRate("Test", 25));
+    }
+
+    @Test
+    public void zeroSpawnRateDisablesSpawning() {
+        Random random = new Random(0L);
+
+        assertFalse(AetherConfig.passesSpawnRate(random, 0));
+        assertTrue(AetherConfig.passesSpawnRate(random, 1));
     }
 
     @Test

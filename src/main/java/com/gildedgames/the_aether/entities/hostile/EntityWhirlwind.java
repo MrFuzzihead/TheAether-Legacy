@@ -389,7 +389,7 @@ public class EntityWhirlwind extends EntityMob {
         int j = MathHelper.floor_double(this.boundingBox.minY);
         int k = MathHelper.floor_double(this.posZ);
 
-        return this.rand.nextInt(AetherConfig.getWhirlwindSpawnrate()) == 0
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getWhirlwindSpawnrate())
             && this.worldObj.getBlock(i, j - 1, k) == BlocksAether.aether_grass
             && this.worldObj.getBlockLightValue(i, j, k) > 8
             && this.worldObj.checkNoEntityCollision(this.boundingBox)

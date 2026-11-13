@@ -1922,7 +1922,7 @@ scope is:
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
 | Optional NEI handlers | No NEI integration beyond the runtime dependency | Medium | Low-medium |
-| Config validation | Done: IDs and spawn rates are range-checked and clamped | Low-medium | Medium |
+| Config validation | Done: IDs and spawn rates validated; 0 disables spawns; EndlessIDs limits honored | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
 | Localization beyond `en_US` | Done: all language files share the `en_US` key set | Low | Low |
@@ -1962,18 +1962,22 @@ when NEI is present, and guarded imports so NEI remains optional.
 
 `AetherConfig` now validates loaded values before registration:
 
-- Spawn rates are clamped to at least `1`, preventing `nextInt(0)` crashes.
+- Spawn rates may be `0` to disable that mob individually. A rate of `1` is
+  always, and higher values decrease the chance. Negative values fall back to
+  `0`. All mob spawn checks use `AetherConfig.passesSpawnRate(...)`, avoiding
+  `nextInt(0)` crashes.
 - The Aether dimension ID must be greater than `1`; otherwise it falls back to `4`.
-- The Aether biome ID must be in `0..255`; otherwise it falls back to `127`.
-- The Inebriation potion ID must be in the valid potion range; otherwise it falls
-  back to `31`.
+- The Aether biome ID uses the vanilla `0..255` limit, or `0..65535` when
+  EndlessIDs is detected.
+- The Inebriation potion ID uses the vanilla potion limit, or the EndlessIDs
+  extended limit when that mod is detected.
 - Maximum life shards must be at least `1`; otherwise they fall back to `10`.
 
 Invalid values are logged instead of crashing. Dimension IDs still need care
 because changing them can affect existing worlds; the validator only falls back
 for definitely invalid values and does not silently migrate valid values.
 
-Unit coverage was added for each validator.
+Unit coverage was added for the validators and for the zero-rate spawn gate.
 
 #### Data-driven dungeon loot tables
 

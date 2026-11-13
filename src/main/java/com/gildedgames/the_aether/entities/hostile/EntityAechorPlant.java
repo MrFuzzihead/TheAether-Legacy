@@ -53,7 +53,8 @@ public class EntityAechorPlant extends EntityAetherAnimal {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getAechorPlantSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getAechorPlantSpawnrate())
+            && super.getCanSpawnHere();
     }
 
     @Override

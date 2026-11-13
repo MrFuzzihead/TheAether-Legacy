@@ -46,7 +46,7 @@ public class EntityZephyr extends EntityFlying implements IMob {
         int k = MathHelper.floor_double(this.posZ);
 
         return this.worldObj.getBlock(i, j - 1, k) == BlocksAether.aether_grass
-            && this.rand.nextInt(AetherConfig.getZephyrSpawnrate()) == 0
+            && AetherConfig.passesSpawnRate(this.rand, AetherConfig.getZephyrSpawnrate())
             && this.worldObj.getCollidingBoundingBoxes(this, this.boundingBox)
                 .size() == 0
             && !this.worldObj.isAnyLiquid(this.boundingBox)

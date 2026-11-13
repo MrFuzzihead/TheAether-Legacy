@@ -71,7 +71,7 @@ public class EntityFlyingCow extends EntitySaddleMount {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getFlyingCowSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getFlyingCowSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override

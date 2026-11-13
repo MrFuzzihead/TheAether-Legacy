@@ -454,7 +454,7 @@ public class EntitySwet extends EntityMountable {
 
     @Override
     public boolean getCanSpawnHere() {
-        return this.rand.nextInt(AetherConfig.getSwetSpawnrate()) == 0 && super.getCanSpawnHere();
+        return AetherConfig.passesSpawnRate(this.rand, AetherConfig.getSwetSpawnrate()) && super.getCanSpawnHere();
     }
 
     @Override
