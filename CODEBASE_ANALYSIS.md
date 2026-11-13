@@ -1921,7 +1921,7 @@ scope is:
 | Item | Current state | Effort | Risk |
 |---|---|---:|---:|
 | OreDictionary coverage | Done: wood, leaf, sapling, ore, gem, and zanite-block tags registered | Low | Low |
-| Optional NEI handlers | Done: enchanter/freezer/incubator viewer + automatic transfer; rendered Moa deferred | Medium | Low-medium |
+| Optional NEI handlers | Done: viewer, automatic transfer, and Moa preview | Medium | Low-medium |
 | Config validation | Done: IDs and spawn rates validated; 0 disables spawns; EndlessIDs limits honored | Low-medium | Medium |
 | Data-driven loot tables | Dungeon loot is hardcoded in switch statements | High | Medium-high |
 | Boss-arena state cleanup | Door/unlock/achievement logic is spread across boss entities | High | High |
@@ -1963,9 +1963,11 @@ Game-test coverage now verifies that each tag contains the expected item.
   maps slots 0 and 1 to the recipe inputs and supports automatic ingredient
   transfer from the player inventory.
 
+The incubator page now also renders the matching adult Moa model, with a slow
+rotation and wing/limb animation.
+
 Deferred for later passes:
 
-- A rendered Moa model on the incubator page; the first pass uses text.
 - Additional NEI categories or recipe metadata.
 
 #### Config validation
@@ -2052,11 +2054,11 @@ parity, and config validation now have coverage. Remaining feature-specific test
 
 1. Loot table extraction/refactor - fix behavior first, then data-drive it.
 2. Boss-arena state machines - last, because it is the riskiest gameplay refactor.
-3. Rendered Moa model on the incubator NEI page - optional follow-up.
+3. Additional NEI categories or metadata - optional follow-up.
 
 OreDictionary coverage, localization key parity, config validation, and the
-NEI viewer/overlay integration are complete. Loot tables are the next
-recommended task.
+NEI viewer/overlay/Moa preview integration are complete. Loot tables are the
+next recommended task.
 
 **Decision needed:** which of these are in scope for this project cycle?
 
